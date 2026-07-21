@@ -9,7 +9,7 @@ using Game.Interaction;
 //   Unity ile State/Interaction sistemleri arasındaki köprü. Bu sınıf
 //   KARAR VERMEZ — hareket kararlarını switch mantığı, Mouth/Body
 //   etkileşim kararlarını InteractionController + ilgili IInteractable
-//   nesneler verir. Shell (Q) ve Sand (E) ise DIŞ nesne aramaz,
+//   nesneler verir. Shell (Q) ve Sand (E) ise DIŞ nesne aramayan,
 //   kaplumbağanın kendi üzerinde olan aksiyonlar (self-action) olduğu
 //   için tamamen burada, kendi switch'i içinde yönetilir — Hop'la
 //   aynı desen.
@@ -41,7 +41,7 @@ using Game.Interaction;
 //   NOT: Slide veya ShellSlide durumunda etkileşimi kapatmak isterseniz,
 //   Update() içinde canInteract bayrağını kullanabilirsiniz.
 //
-//   İçerdiği fonksiyonlar:
+// İçerdiği fonksiyonlar:
 //   - Awake()                 : referansları alır
 //   - Update()                : input okur, switch ile state mantığını çalıştırır, etkileşimi iletir
 //   - UpdateShellInput()      : Q tuşunu okur, Shell state geçişlerini tetikler (self-action)
@@ -51,24 +51,6 @@ using Game.Interaction;
 //   - ReadHopInput()          : Hop tuşunu (Space) okur
 //   - GetGroundInfo()         : zemin eğimi, normal ve aşağı/yön vektörlerini döndürür
 // ============================================================
-
-// Fonksiyon Özetleri:
-// - Awake()                 : CharacterController, Animator ve InteractionController referanslarını alır. Yerden uzaklık (groundOffset) ve yumuşatılmış zemin yüksekliği (smoothedGroundHeight) başlatılır.
-// - Update()                : Her karede giriş okur, self-action kontrolü yapar, zemin bilgilerini alır, slide yönlerini günceller, Hop, Shell ve Sand girişlerini işler, etkileşimi iletir, durum makinesini çalıştırır, yerçekimi uygular ve gövdeyi zemine hizalar.
-// - GetGroundInfo()         : Ön, arka, sol, sağ dört farklı pozisyondan aşağıya raycast atar. Çarpan tüm hit'lerin normalsini ve noktalarını ortalarak ortalama zemin normalsi, eğim açıği, aşağı yön ve yan yön vektörlerini döndürür. Ayrıca zemin yüksekliğini yumuşatır (smooth).
-// - AlignBodyToGround()     : Gövdenin yerel "up" eksenini (pitch/roll) yumuşakça zemin normaline hizalar, yaw (bakış yönü) değişmeden korunur.
-// - HandleWalkMovement()    : Normal yürüyüş hareketini yönetir; eğime göre hız çarpanını uygular, yukarı tırmanırken maksimum eğimi aşarsa kayma (Slide) durumuna geçer.
-// - HandleSimpleSlide()     : Yürüyüşte aşın eğimde kayma (gravity‑based slide). Yerden düşük kayma hızıyla hareket eder, eğim yumuşakça olunca Idle'a döner.
-// - HandleShellSlide()      : Kabukta aşın eğimde kayma. A/D tuşları karakteri döndürmez, sadece yan ağırlık verir; ivmelenme, sürtünme ve yan ağırlık etkisiyle hareket eder.
-// - UpdateSmoothedSlideVectors(): Kayma yönlerini (slideDirection ve slideSideDirection) titreşimi azaltmak için yumuşatır.
-// - UpdateShellInput()      : Q tuşuna basılı tutmamış basışları yakalar; ShellEnter, ShellIdle, ShellExit geçişlerini yönetir.
-// - UpdateSandInput()       : E tuşunun basılı tutma süresine göre Dig (kısa basış) ve Burrow (uzun basış) geçişlerini yönetir.
-// - TurnInPlace()           : Karakteri yerinde y ekseninde döndürür.
-// - ApplyGravity()          : Yerçekimi etkisini uygular; grounded olduğundaverticalVelocity'yı sabitleyerek karakterin宙нун zemine yapışmasını sağlar.
-// - ReadMoveInput()         : Klavye WASD ve ok tuşlarını okur, Vector2 olarak döndürür.
-// - ReadHopInput()          : Space tuşunun bu karede basılıp basılmadığını kontrol eder.
-// - OnDrawGizmosSelected()  : Play modunda dört tane zemin rayını (ön, arka, sol, sağ) Scene view'da gösterir; yeşil = hit, kırmızı = miss.
-
 namespace Game.Character
 {
     // Şu an sadece kara state'leri var. Swim ileride eklenecek.
@@ -98,6 +80,15 @@ namespace Game.Character
         [SerializeField] private float moveSpeed = 3f;                // Düz düzlemde temel yürüme hızı
         [SerializeField] private float moveRotationSpeed = 10f;       // Giderken dönüş hızı çarpanı
         [SerializeField] private float turnInPlaceSpeed = 90f;        // Yerinde dönerken (derece/saniye)
+        [Tooltip("Geri geri (S) yürürken hız çarpanı - 1 = ileri ile aynı hız, düşük değer = daha yavaş geri gitme")]
+        [Range(0.1f, 1f)]
+        [SerializeField] private float backwardMoveMultiplier = 0.6f;
+
+        [Header("Hareket İvmelenmesi (Ease-in/out)")]
+        [Tooltip("Durgunluktan hedef hıza ulaşma süresi (saniye) - 0'a yakın = anlık başlama, yüksek = ağır/yavaş ivmelenme")]
+        [SerializeField] private float moveAccelerationTime = 0.15f;
+        [Tooltip("Girdi bırakıldığında hızın 0'a inme süresi (saniye)")]
+        [SerializeField] private float moveDecelerationTime = 0.12f;
 
         // ----------------- Walking slope handling -----------------
         [Header("Yürüyüş Eğimi Ayarları")]
@@ -112,8 +103,6 @@ namespace Game.Character
         [Header("Yürüyüş Kayması (Slide) Ayarları")]
         [Tooltip("Yürüyüş kayması sürtünmesi (m/s²)")]
         [SerializeField] private float walkSlideFriction = 4f;
-        [Tooltip("Yürüyüş kaymasında yön hizalama hızı (derece/sn)")]
-        [SerializeField] private float walkSlideAlignSpeed = 5f;
 
         // ----------------- Shell Slide specific -----------------
         // NOT: Bu grup SADECE HandleShellSlide() içinde kullanılır.
@@ -149,19 +138,21 @@ namespace Game.Character
         [SerializeField] private float groundAlignSpeed = 6f;
         [Tooltip("Zemin normalini yumuşatma hızı - köşeli/engebeli geçişlerde titreşimi azaltır")]
         [SerializeField] private float groundNormalSmoothing = 8f;
+        [Tooltip("Gövdenin düz zeminden en fazla kaç derece eğilebileceği - kenarlarda gövdenin abartılı 'asılmasını' engeller")]
+        [SerializeField] private float maxGroundTiltAngle = 35f;
 
-        // ===================== Ground Detection =====================
-        [Header("Ground Detection")]
-        [Tooltip("How far down the rays are cast")]
-        [SerializeField] private float groundRayLength = 5f;
-        [Tooltip("Forward offset of the front ray from the center")]
-        [SerializeField] private float frontRayOffset = 0.5f;
-        [Tooltip("Back offset of the back ray from the center")]
-        [SerializeField] private float backRayOffset = 0.5f;
-        [Tooltip("Side offset of the left/right rays from the center")]
-        [SerializeField] private float sideRayOffset = 0.5f;
-        [Tooltip("Smoothing for ground height (vertical position)")]
-        [SerializeField] private float groundHeightSmooth = 8f;
+        // ----------------- Zemin örnekleme (kenar/köşe algılama) -----------------
+        [Header("Zemin Örnekleme (Ground Sampling)")]
+        [Tooltip("Kaç noktadan ray atılacak: 1 (tek nokta), 2 (ön-arka) veya 4 (ön-arka-sağ-sol). Performans endişesi olursa düşürülebilir.")]
+        [SerializeField] private int groundSampleCount = 4;
+        [Tooltip("Örnekleme noktalarının merkezden uzaklığı (genelde kabuk yarıçapına yakın bir değer)")]
+        [SerializeField] private float groundSampleRadius = 0.4f;
+        [Tooltip("Ray'in ne kadar aşağı ineceği")]
+        [SerializeField] private float groundCheckDistance = 1.5f;
+        [Tooltip("Sadece bu layer'lara ray at - su/foliage/interaction collider'larını dışarıda tutmak için")]
+        [SerializeField] private LayerMask groundLayerMask = ~0;
+        [Tooltip("En yakın örnekleme noktasına göre bu kadar (metre) daha uzakta çarpan noktalar 'gerçek destek' sayılmaz - uçurum kenarında altta kalan uzak zeminin yanlışlıkla dikleştirmesini önler")]
+        [SerializeField] private float maxSampleHeightVariance = 0.6f;
 
         // ===================== Other Systems =====================
         [Header("Yerçekimi")]
@@ -171,7 +162,7 @@ namespace Game.Character
         [Header("Hop")]
         [SerializeField] private float hopDuration = 1.167f; // Loco_Jump klibinin gerçek süresi
         [SerializeField] private float hopMoveSpeed = 2f;    // Hop sırasında ileri gidiş hızı (kod kontrollü)
-        [SerializeField] private float hopForwardDelay = 0.15f; // animasyonun "hazırlık" karesi bitene kadar ileri hareket başlar
+        [SerializeField] private float hopForwardDelay = 0.15f; // animasyonun "hazırlık" karesi bitene kadar ileri hareket başlamasın
 
         [Header("Kabuk (Q) — self-action, dış nesne aramaz")]
         [SerializeField] private float shellTransitionDuration = 0.5f; // Enter/Exit animasyon süresi (dummy tahmin)
@@ -218,19 +209,17 @@ namespace Game.Character
         private Vector3 smoothedSlideDirection;
         private Vector3 smoothedSlideSideDirection;
 
-        // Ground detection smoothed values
-        private float smoothedGroundHeight;
-        private float groundOffset;
+        // Gövde-zemin uyumu için yumuşatılmış zemin normali (AlignBodyToGround() kullanır)
+        private Vector3 smoothedGroundNormal = Vector3.up;
+
+        // Yürüme ivmelenmesi için o anki (yumuşatılmış) hız - hedef hıza MoveTowards ile yaklaşır
+        private float currentMoveSpeed;
 
         private void Awake()
         {
             controller = GetComponent<CharacterController>();
             animator = GetComponent<Animator>();
             interactionController = GetComponent<InteractionController>();
-
-            // Initialize ground offset (half height + center)
-            groundOffset = (controller.height / 2f) + controller.center.y;
-            smoothedGroundHeight = transform.position.y - groundOffset;
         }
 
         private void Update()
@@ -250,7 +239,7 @@ namespace Game.Character
 
             // ---------- Ground info ----------
             bool groundInfo = GetGroundInfo(out float slopeAngle, out Vector3 groundNormal,
-                                            out Vector3 downDir, out Vector3 sideDir);
+                                            out Vector3 downDir, out Vector3 sideDir, out float groundConfidence);
             // groundInfo false => treat as flat ground
             if (!groundInfo)
             {
@@ -308,6 +297,7 @@ namespace Game.Character
                     if (!hasForwardInput)
                     {
                         currentState = CharacterState.Idle;
+                        currentMoveSpeed = 0f; // bir sonraki hareket başlangıcında ease-in sıfırdan başlasın
                         break;
                     }
 
@@ -377,7 +367,7 @@ namespace Game.Character
                     break;
 
                 case CharacterState.Slide:
-                    // Normal yürüyüşte aşın eğimde kayma (gravity-based simple slide)
+                    // Normal yürüyüşde aşın eğimde kayma (gravity-based simple slide)
                     HandleSimpleSlide(slopeAngle);
                     break;
 
@@ -405,53 +395,103 @@ namespace Game.Character
                 ApplyGravity();
             }
 
-            // ---------- Align to ground height ----------
-            // We rely on CharacterController's collision for vertical position;
-            // ground height smoothing is not used to avoid conflicts.
-
             // ---------- Body tilt to ground ----------
             // Hop sırasında zemine tilt yapmıyoruz (havadayken anlamsız); diğer tüm state'lerde
-            // (Slide/ShellSlide dahil) gövde zemin normaline yumuşakça uyum sağlar, yaw'a dokunmaz.
+            // (Slide/ShellSlide dahil) gövde zemin normaline yumuşakça uyum sağlar, yaw'a dokunmadan.
             if (currentState != CharacterState.Hop)
             {
-                AlignBodyToGround(groundInfo, groundNormal);
+                AlignBodyToGround(groundInfo, groundNormal, groundConfidence);
             }
         }
 
         // ===================== Helper Methods =====================
 
         /// <summary>
-        /// Ön, arka, sol, sağ dört farklı pozisyondan aşağıya raycast atar. Çarpan tüm hit'lerin normalsini ve noktalarını ortalarak ortalama zemin normalsi, eğim açıği, aşağı yön ve yan yön vektörlerini döndürür.
+        /// Karakterin altını groundSampleCount kadar noktadan (ön/arka/sağ/sol) tarar, normal'lerin
+        /// ortalamasını döndürür. Kenarda/köşede bazı noktalar boşluğa denk gelirse groundConfidence
+        /// düşer (0-1) - bu değeri AlignBodyToGround, emin olmadığımız durumlarda tilt'i azaltmak için kullanır.
+        /// Returns true if at least one sample hit, and outputs slope angle (0 = flat), ground normal,
+        /// down-slope direction (steepest descent, normalized) and side-slope direction (perp to down within plane, normalized).
         /// </summary>
         private bool GetGroundInfo(out float slopeAngle, out Vector3 groundNormal,
-                                   out Vector3 downDir, out Vector3 sideDir)
+                                   out Vector3 downDir, out Vector3 sideDir, out float groundConfidence)
         {
-            int hitCount = 0;
-            Vector3 normalSum = Vector3.zero;
-            Vector3 pointSum = Vector3.zero;
-            bool anyHit = false;
+            // Örnekleme yönlerini karakterin ANLIK yatay (tilt'siz) bakış yönüne göre kur.
+            // transform.forward'ı doğrudan kullanmıyoruz çünkü o an zaten eğilmiş olabilir (AlignBodyToGround'dan) -
+            // bu, önceki karenin tilt'ine göre bir sonraki örneklemeyi bozan bir geri besleme (feedback loop) yaratırdı.
+            Vector3 flatForward = Vector3.ProjectOnPlane(transform.forward, Vector3.up);
+            if (flatForward.sqrMagnitude < 0.0001f) flatForward = Vector3.forward;
+            flatForward.Normalize();
+            Vector3 flatRight = Vector3.Cross(Vector3.up, flatForward).normalized;
 
-            Vector3 baseOrigin = transform.position + Vector3.up * 0.5f;
-
-            Vector3[] origins = {
-                baseOrigin + transform.forward * frontRayOffset,
-                baseOrigin - transform.forward * backRayOffset,
-                baseOrigin + transform.right * sideRayOffset,
-                baseOrigin - transform.right * sideRayOffset
-            };
-
-            foreach (var origin in origins)
+            // Örnekleme noktalarının merkezden yatay ofsetleri (Y ekseni hariç)
+            Vector3[] offsets;
+            switch (groundSampleCount)
             {
-                if (Physics.Raycast(origin, Vector3.down, out RaycastHit hit, groundRayLength, ~0))
-                {
-                    anyHit = true;
-                    hitCount++;
-                    normalSum += hit.normal;
-                    pointSum += hit.point;
-                }
+                case 1:
+                    offsets = new[] { Vector3.zero };
+                    break;
+                case 2:
+                    offsets = new[] { flatForward * groundSampleRadius, -flatForward * groundSampleRadius };
+                    break;
+                default: // 4 (ya da başka bir değer girilirse yine 4 kabul et)
+                    offsets = new[]
+                    {
+                        flatForward * groundSampleRadius,
+                        -flatForward * groundSampleRadius,
+                        flatRight * groundSampleRadius,
+                        -flatRight * groundSampleRadius
+                    };
+                    break;
             }
 
-            if (!anyHit)
+            // 1. geçiş: tüm noktalardan ray at, sonuçları (mesafe dahil) topla ama henüz karara bağlama
+            var hits = new (bool didHit, float distance, Vector3 normal, Vector3 origin, Vector3 point)[offsets.Length];
+            float minDistance = float.MaxValue;
+
+            for (int i = 0; i < offsets.Length; i++)
+            {
+                Vector3 offset = offsets[i];
+                Vector3 origin = transform.position + offset + Vector3.up * 0.5f; // hafif yukarıdan başlat, kendine çarpmasın
+                bool didHit = Physics.Raycast(origin, Vector3.down, out RaycastHit hit, groundCheckDistance, groundLayerMask);
+                hits[i] = (didHit, didHit ? hit.distance : -1f, didHit ? hit.normal : Vector3.up, origin, didHit ? hit.point : origin + Vector3.down * groundCheckDistance);
+                if (didHit && hit.distance < minDistance) minDistance = hit.distance;
+            }
+
+            // 2. geçiş: en yakın hit'ten çok daha uzakta olan noktaları (örn. bir uçurumun dibindeki
+            // zemin) GERÇEK destek saymıyoruz - normal yönü "yukarı" çıksa bile karakterin o noktada
+            // fiilen desteklendiği anlamına gelmez. Bu sayede düz zeminin devam ettiği ama çok aşağıda
+            // olduğu kenar durumlarında da confidence doğru şekilde düşüyor.
+            Vector3 normalSum = Vector3.zero;
+            int hitCount = 0;
+
+#if UNITY_EDITOR
+            if (debugGroundSamples == null || debugGroundSamples.Length != offsets.Length)
+                debugGroundSamples = new GroundSampleDebug[offsets.Length];
+#endif
+
+            for (int i = 0; i < hits.Length; i++)
+            {
+                var h = hits[i];
+                bool countsAsSupport = h.didHit && (h.distance - minDistance) <= maxSampleHeightVariance;
+                if (countsAsSupport)
+                {
+                    normalSum += h.normal;
+                    hitCount++;
+                }
+
+#if UNITY_EDITOR
+                debugGroundSamples[i].origin = h.origin;
+                debugGroundSamples[i].endPoint = h.point;
+                debugGroundSamples[i].hit = h.didHit;
+                debugGroundSamples[i].discarded = h.didHit && !countsAsSupport; // hit oldu ama yükseklik farkı yüzünden sayılmadı
+                debugGroundSamples[i].normal = h.normal;
+#endif
+            }
+
+            groundConfidence = (float)hitCount / offsets.Length;
+
+            if (hitCount == 0)
             {
                 slopeAngle = 0f;
                 groundNormal = Vector3.up;
@@ -460,49 +500,56 @@ namespace Game.Character
                 return false;
             }
 
-            Vector3 avgNormal = (normalSum / hitCount).normalized;
-            Vector3 avgPoint = pointSum / hitCount;
-
-            slopeAngle = Vector3.Angle(Vector3.up, avgNormal);
-            groundNormal = avgNormal;
+            groundNormal = (normalSum / hitCount).normalized;
+            slopeAngle = Vector3.Angle(Vector3.up, groundNormal);
+            // Direction of steepest descent = projection of gravity onto the plane
             downDir = Vector3.ProjectOnPlane(Vector3.down, groundNormal).normalized;
+            // Side direction: cross product of ground normal and down direction gives a vector tangent to the plane and perpendicular to down
             sideDir = Vector3.Cross(groundNormal, downDir).normalized;
-
-            // Smooth ground height for vertical position
-            smoothedGroundHeight = Mathf.Lerp(smoothedGroundHeight, avgPoint.y, groundHeightSmooth * Time.deltaTime);
-
             return true;
         }
 
         /// <summary>
-        /// Gövdenin yerel "up" eksenini (pitch/roll) yumuşakça zemin normaline hizalar, yaw (bakış yönü) değişmeden korunur.
+        /// Gövdeyi zemin normaline göre yavaşça eğer (pitch/roll). Yaw (bakış yönü) turning/hareket
+        /// kodundan zaten belirleniyor - buna dokunulmaz, sadece "up" ekseni zemine hizalanır.
         /// Zemin normali önce yumuşatılır (groundNormalSmoothing) - köşeli/engebeli objelerin üzerinden
         /// geçerken raycast'ten gelen ani normal değişimleri titreşime yol açmasın diye.
+        /// confidence düşükse (kenar/köşe - bazı örnekler ıskaladıysa) hedef normal Vector3.up'a doğru çekilir,
+        /// yani "emin olamadığımız" durumlarda abartılı eğilme yerine düz durmayı tercih ederiz.
+        /// Ayrıca maxGroundTiltAngle ile düz zeminden sapma her koşulda sınırlanır (resimdeki "asılma" sorununu önler).
         /// </summary>
-        private void AlignBodyToGround(bool grounded, Vector3 groundNormal)
+        private void AlignBodyToGround(bool grounded, Vector3 groundNormal, float confidence)
         {
-            Vector3 targetNormal = grounded ? groundNormal : Vector3.up;
-            // Smooth the normal to avoid jitter on uneven terrain
+            Vector3 rawTarget = grounded ? groundNormal : Vector3.up;
+            // Düşük confidence'ta hedefi Vector3.up'a doğru harmanla (kenar/köşede aşırı tilt'i önler)
+            Vector3 targetNormal = Vector3.Slerp(Vector3.up, rawTarget, confidence).normalized;
+            // Ekstra güvenlik: düz zeminden sapmayı maxGroundTiltAngle ile sınırla
+            targetNormal = Vector3.RotateTowards(Vector3.up, targetNormal, maxGroundTiltAngle * Mathf.Deg2Rad, 0f);
+
             smoothedGroundNormal = Vector3.Slerp(smoothedGroundNormal, targetNormal, groundNormalSmoothing * Time.deltaTime).normalized;
 
-            // Preserve current yaw: project forward onto the plane defined by the smoothed up vector
+            // Mevcut yaw'ı koru: transform.forward'ı yeni "up" düzlemine izdüşür, sadece tilt değişir
             Vector3 projectedForward = Vector3.ProjectOnPlane(transform.forward, smoothedGroundNormal);
-            if (projectedForward.sqrMagnitude < 0.0001f) return; // forward nearly parallel to up (rare), skip this frame
+            if (projectedForward.sqrMagnitude < 0.0001f) return; // forward normale tam paralelse (nadir), bu kareyi atla
 
             Quaternion targetRot = Quaternion.LookRotation(projectedForward.normalized, smoothedGroundNormal);
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, groundAlignSpeed * Time.deltaTime);
         }
 
-        // We keep a private field for smoothed normal used in AlignBodyToGround
-        private Vector3 smoothedGroundNormal = Vector3.up;
-
         /// <summary>
-        /// Normal yürüyüş hareketini yönetir; eğime göre hız çarpanını uygular, yukarı tırmanırken maksimum eğimi aşarsa kayma (Slide) durumuna geçer.
+        /// Walking movement with slope-based speed modulation and automatic slip when slope > maxWalkableSlope.
+        /// Speed reduction only when moving uphill; downhill or flat moves at base speed.
         /// </summary>
         private void HandleWalkMovement(float slopeAngle, float forwardInput)
         {
-            // Determine if moving uphill: dot between forward direction and downhill direction
-            bool movingUphill = forwardInput > 0f && Vector3.Dot(transform.forward, slideDirection) < 0f;
+            // Gerçek hareket yönü: W ile ileri, S ile geri - transform.forward'ın işareti forwardInput'a göre değişir.
+            // ÖNEMLİ: "yukarı tırmanma" tespitini forwardInput'un işaretine (W/S) göre DEĞİL, bu gerçek hareket
+            // vektörünün eğime göre yönüne göre yapıyoruz. Aksi halde S ile geri geri yürüyerek (burun aşağı
+            // bakarken) çok dik yokuşları da hiç yavaşlamadan/kaymadan tırmanmak mümkün oluyordu - bu bug'dı.
+            Vector3 moveDirWorld = transform.forward * forwardInput;
+            bool isMoving = Mathf.Abs(forwardInput) > 0.01f;
+            bool movingUphill = isMoving && Vector3.Dot(moveDirWorld.normalized, slideDirection) < 0f;
+
             // Compute speed multiplier from slope (0 = flat, 1 = maxWalkableSlope) only if moving uphill
             float slopeFactor = 0f;
             if (movingUphill)
@@ -512,25 +559,34 @@ namespace Game.Character
             }
             float speedMultiplier = walkSpeedBySlope.Evaluate(slopeFactor);
             // NOT: shellSlideSpeedMultiplier buraya KASITLI olarak katılmıyor - yürüme hızı
-            // slide ayarlarından tamamen bağımsız olmalı.
-            float effectiveSpeed = moveSpeed * speedMultiplier;
+            // shell slide ayarlarından tamamen bağımsız olmalı.
+            // Geri geri (S) yürürken ayrı bir çarpan uygulanır - ileri hızdan bağımsız ayarlanabilir.
+            float directionMultiplier = forwardInput < 0f ? backwardMoveMultiplier : 1f;
+            float targetSpeed = moveSpeed * speedMultiplier * directionMultiplier;
 
-            // Sadece GERÇEKTEN yukarı tırmanmaya çalışırken (movingUphill) ve eşik aşılmışsa kay.
-            // Aynı dik zeminde aşağı inerken (movingUphill == false) bu tetiklenmemeli.
+            // Sadece GERÇEKTEN yukarı tırmanmaya çalışırken (movingUphill, W ya da S fark etmez) ve
+            // eşik aşılmışsa kay. Aynı dik zeminde aşağı inerken (movingUphill == false) tetiklenmemeli.
             if (movingUphill && slopeAngle > maxWalkableSlope)
             {
                 // Enter simple slide state (gravity-driven)
                 currentState = CharacterState.Slide;
                 // Ani sıfırlama yerine mevcut yürüme hızını devral - duraksama hissini azaltır
-                currentSlideSpeed = effectiveSpeed;
+                currentSlideSpeed = currentMoveSpeed;
                 smoothedSlideDirection = Vector3.zero; // yön yumuşatmasını yeniden senkronla
                 // slideDirection already set in Update()
                 return;
             }
 
+            // Ease-in/out: anlık sıfırdan hıza zıplamak yerine hedef hıza yumuşakça yaklaş.
+            // İvmelenirken moveAccelerationTime, yavaşlarken (girdi bırakılınca/tersine dönünce) moveDecelerationTime kullanılır.
+            bool accelerating = Mathf.Abs(targetSpeed) > Mathf.Abs(currentMoveSpeed);
+            float easeTime = Mathf.Max(0.0001f, accelerating ? moveAccelerationTime : moveDecelerationTime);
+            float maxDelta = (moveSpeed / easeTime) * Time.deltaTime;
+            currentMoveSpeed = Mathf.MoveTowards(currentMoveSpeed, targetSpeed, maxDelta);
+
             // Normal movement: apply forward movement with potentially reduced speed
             Vector3 moveDir = transform.forward * forwardInput;
-            controller.Move(moveDir.normalized * effectiveSpeed * Time.deltaTime);
+            controller.Move(moveDir.normalized * currentMoveSpeed * Time.deltaTime);
 
             // Apply turning (A/D) while walking
             if (Mathf.Abs(moveInput.x) > 0.01f)
@@ -546,7 +602,7 @@ namespace Game.Character
         }
 
         /// <summary>
-        /// Yürüyüşte aşın eğimde kayma (gravity‑based slide). Yerden düşük kayma hızıyla hareket eder, eğim yumuşakça olunca Idle'a döner.
+        /// Simple gravity‑based slide used when walking on too steep a slope.
         /// </summary>
         private void HandleSimpleSlide(float slopeAngle)
         {
@@ -572,19 +628,18 @@ namespace Game.Character
             Vector3 motion = smoothedSlideDirection * currentSlideSpeed * Time.deltaTime;
             controller.Move(motion);
 
-            // Optional: align character to slope direction (smooth)
-            if (smoothedSlideDirection.sqrMagnitude > 0.0001f)
-            {
-                Quaternion targetRot = Quaternion.LookRotation(smoothedSlideDirection, Vector3.up);
-                transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, walkSlideAlignSpeed * Time.deltaTime);
-            }
+            // NOT: Buraya kayma yönüne dönme (facing rotation) eklenmiyor - kullanıcı isteğiyle
+            // kaldırıldı. Karakter kayarken bakış yönünü korur, sadece pozisyon kayar.
+            // Gövdenin zemine göre tilt'i (pitch/roll) zaten AlignBodyToGround() tarafından
+            // ayrıca ve yaw'dan bağımsız olarak yapılıyor.
 
             animator.SetBool(IsSlidingHash, true);
             animator.SetBool(IsRunnerHash, false);
         }
 
         /// <summary>
-        /// Kabukta aşın eğimde kayma. A/D tuşları karakteri döndürmez, sadece yan ağırlık verir; ivmelenme, sürtünme ve yan ağırlık etkisiyle hareket eder.
+        /// Shell slide behavior: align to down slope, accelerate, friction, side weighting.
+        /// A/D tuşları karakteri döndürmez, sadece yan ağırlık verir.
         /// </summary>
         private void HandleShellSlide(float slopeAngle, float sideInput)
         {
@@ -646,7 +701,8 @@ namespace Game.Character
         }
 
         /// <summary>
-        /// Kayma yönlerini (slideDirection ve slideSideDirection) titreşimi azaltmak için yumuşatır.
+        /// Ham slideDirection/slideSideDirection'ı (Update()'te raycast'ten anlık hesaplanır) yavaşça takip eden
+        /// yumuşatılmış versiyonlarını günceller. Sadece slide handler'ları çağırır - movingUphill hesabını etkilemez.
         /// </summary>
         private void UpdateSmoothedSlideVectors()
         {
@@ -705,6 +761,17 @@ namespace Game.Character
 
             bool canStart = currentState == CharacterState.Idle || currentState == CharacterState.Walk || currentState == CharacterState.Turn;
 
+            // Check if ground is sand
+            bool isSand = false;
+            if (canStart)
+            {
+                Vector3 origin = transform.position + Vector3.up * 0.5f;
+                if (Physics.Raycast(origin, Vector3.down, out RaycastHit hit, groundCheckDistance, groundLayerMask))
+                {
+                    isSand = hit.collider.CompareTag("Sand");
+                }
+            }
+
             if (keyboard.eKey.wasPressedThisFrame)
             {
                 sandPressStartTime = Time.time;
@@ -714,7 +781,7 @@ namespace Game.Character
             if (sandAwaitingDecision && keyboard.eKey.isPressed && Time.time - sandPressStartTime >= sandHoldThreshold)
             {
                 sandAwaitingDecision = false;
-                if (canStart)
+                if (canStart && isSand)
                 {
                     currentState = CharacterState.Burrow;
                     animator.SetBool(IsBurrowingHash, true);
@@ -728,7 +795,7 @@ namespace Game.Character
                     currentState = CharacterState.Idle;
                     animator.SetBool(IsBurrowingHash, false);
                 }
-                else if (sandAwaitingDecision && canStart)
+                else if (sandAwaitingDecision && canStart && isSand)
                 {
                     currentState = CharacterState.Dig;
                     actionTimer = 0f;
@@ -739,6 +806,7 @@ namespace Game.Character
             }
         }
 
+        
         // ===================== Movement Helpers =====================
         private void TurnInPlace(float turnDirection)
         {
@@ -779,39 +847,58 @@ namespace Game.Character
             return keyboard != null && keyboard.spaceKey.wasPressedThisFrame;
         }
 
-        // ===================== Gizmos =====================
-        private void OnDrawGizmosSelected()
+        // ============================================================================
+        // ============ DEBUG - ZEMİN RAY GÖRSELLEŞTİRME (kolayca silinebilir) ========
+        // ------------------------------------------------------------------------------
+        // Bu bölüm sadece Scene/Game view'da ray'leri görebilmen için var, oyun mantığına
+        // hiçbir etkisi yok. İşin bitince bu iki bölümü (üstteki #if UNITY_EDITOR ile
+        // sarılı cache kodu + bu bölümün TAMAMI) silmen yeterli, başka hiçbir yeri
+        // etkilemez.
+        // ============================================================================
+#if UNITY_EDITOR
+        [Header("DEBUG - Zemin Ray Görselleştirme (silinebilir)")]
+        [SerializeField] private bool showGroundRayGizmos = true;
+        [SerializeField] private Color gizmoRayHitColor = Color.green;
+        [SerializeField] private Color gizmoRayMissColor = Color.red;
+        [SerializeField] private Color gizmoRayDiscardedColor = new Color(1f, 0.6f, 0f); // turuncu: hit oldu ama yükseklik farkı yüzünden sayılmadı
+        [SerializeField] private float gizmoNormalLength = 0.5f;
+        [SerializeField] private float gizmoHitSphereRadius = 0.05f;
+
+        private struct GroundSampleDebug
         {
-            // Only draw in play mode so we see the actual rays used
-            if (!Application.isPlaying) return;
+            public Vector3 origin;    // ray'in başladığı nokta
+            public Vector3 endPoint;  // hit varsa çarpma noktası, yoksa ray'in gittiği en uzak nokta
+            public bool hit;
+            public bool discarded;    // hit oldu ama diğer noktalara göre çok uzaktaydı (uçurun altı vs.) - desteğe sayılmadı
+            public Vector3 normal;    // hit varsa yüzey normali
+        }
 
-            Vector3 baseOrigin = transform.position + Vector3.up * 0.5f;
-            Vector3[] origins = {
-                baseOrigin + transform.forward * frontRayOffset,
-                baseOrigin - transform.forward * backRayOffset,
-                baseOrigin + transform.right * sideRayOffset,
-                baseOrigin - transform.right * sideRayOffset
-            };
+        private GroundSampleDebug[] debugGroundSamples;
 
-            // Draw the center point
-            Gizmos.color = Color.yellow;
-            Gizmos.DrawSphere(baseOrigin, 0.02f);
+        private void OnDrawGizmos()
+        {
+            if (!showGroundRayGizmos || debugGroundSamples == null) return;
 
-            // Draw each ray
-            foreach (var origin in origins)
+            foreach (GroundSampleDebug sample in debugGroundSamples)
             {
-                if (Physics.Raycast(origin, Vector3.down, out RaycastHit hit, groundRayLength, ~0))
+                // Öncelik: gerçek miss (kırmızı) > yükseklik farkı yüzünden diskarte (turuncu) > geçerli hit (yeşil)
+                Gizmos.color = !sample.hit ? gizmoRayMissColor : (sample.discarded ? gizmoRayDiscardedColor : gizmoRayHitColor);
+                Gizmos.DrawLine(sample.origin, sample.endPoint);
+
+                if (sample.hit)
                 {
-                    Gizmos.color = Color.green;
-                    Gizmos.DrawLine(origin, origin + Vector3.down * hit.distance);
-                    Gizmos.DrawSphere(hit.point, 0.02f);
-                }
-                else
-                {
-                    Gizmos.color = Color.red;
-                    Gizmos.DrawLine(origin, origin + Vector3.down * groundRayLength);
+                    Gizmos.DrawSphere(sample.endPoint, gizmoHitSphereRadius);
+                    // Yüzey normalini de çiz - hangi yönün "yukarı" sayıldığını görmek için
+                    Gizmos.color = Color.cyan;
+                    Gizmos.DrawLine(sample.endPoint, sample.endPoint + sample.normal * gizmoNormalLength);
                 }
             }
+
+            // Ortalama (kullanılan) yumuşatılmış zemin normalini de ayrı bir renkle göster
+            Gizmos.color = Color.yellow;
+            Gizmos.DrawLine(transform.position, transform.position + smoothedGroundNormal * (gizmoNormalLength * 1.5f));
         }
+#endif
+        // ============ DEBUG BÖLÜMÜ SONU ============================================
     }
 }

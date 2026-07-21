@@ -428,7 +428,7 @@ MonoBehaviour:
   RecenteringTarget: 2
   HorizontalAxis:
     Value: 0
-    Center: 0
+    Center: -0
     Range: {x: -180, y: 180}
     Wrap: 1
     Recentering:
@@ -1319,13 +1319,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 913620554}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.123183064, y: -0, z: -0, w: 0.99238396}
-  m_LocalPosition: {x: 8.69, y: -1.45, z: -3.96}
+  m_LocalRotation: {x: -0.11997342, y: 0.2250608, z: 0.027936444, w: 0.9665266}
+  m_LocalPosition: {x: 8.281, y: -1.054, z: -3.464}
   m_LocalScale: {x: 3.7082, y: 3.7082, z: 3.7082}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: -14.152, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: -14.152, y: 26.216, z: 0}
 --- !u!1 &975506874
 GameObject:
   m_ObjectHideFlags: 0
@@ -1543,13 +1543,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1206818200}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.10613883, y: -0, z: -0, w: 0.9943513}
-  m_LocalPosition: {x: 8.71, y: -1.46, z: -1.18}
+  m_LocalRotation: {x: 0.19400434, y: -0, z: -0, w: 0.98100066}
+  m_LocalPosition: {x: 8.71, y: -0.925, z: -1.18}
   m_LocalScale: {x: 3.7082, y: 3.7082, z: 3.7082}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 12.186, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 22.373, y: 0, z: 0}
 --- !u!1 &1266508466
 GameObject:
   m_ObjectHideFlags: 0
@@ -1880,13 +1880,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1588145663}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.019923877, y: 0.9793173, z: 0.12156114, w: 0.16051024}
-  m_LocalPosition: {x: 8.71, y: -1.45, z: -5.31}
+  m_LocalRotation: {x: 0.0037870726, y: 0.95097303, z: 0.2636092, w: 0.16169775}
+  m_LocalPosition: {x: 8.71, y: -1.2009999, z: -5.31}
   m_LocalScale: {x: 3.7082, y: 3.7082, z: 3.7082}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: -14.152, y: 161.384, z: 0}
+  m_LocalEulerAnglesHint: {x: -30.01, y: 159.056, z: 6.129}
 --- !u!1 &1650915012
 GameObject:
   m_ObjectHideFlags: 0
@@ -1920,35 +1920,46 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Game.Character.TurtleController
   moveSpeed: 4
-  moveRotationSpeed: 5
+  moveRotationSpeed: 6
   turnInPlaceSpeed: 45
-  maxWalkableSlope: 45
+  backwardMoveMultiplier: 0.4
+  moveAccelerationTime: 0.15
+  moveDecelerationTime: 0.12
+  maxWalkableSlope: 44
   walkSpeedBySlope:
     serializedVersion: 2
     m_Curve:
     - serializedVersion: 3
-      time: 0
-      value: 1
-      inSlope: 0
-      outSlope: -1
+      time: 0.00000166893
+      value: 0.9980976
+      inSlope: -0.011086865
+      outSlope: -0.011086865
       tangentMode: 0
       weightedMode: 0
       inWeight: 0
-      outWeight: 0
+      outWeight: 0.34333223
     - serializedVersion: 3
-      time: 1
-      value: 0
-      inSlope: -1
-      outSlope: 0
+      time: 0.55165815
+      value: 0.859741
+      inSlope: -0.65894026
+      outSlope: -0.65894026
       tangentMode: 0
       weightedMode: 0
-      inWeight: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 0.9966667
+      value: 0.0019029203
+      inSlope: -1.9980943
+      outSlope: -1.9980943
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.030100474
       outWeight: 0
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
   walkSlideFriction: 4
-  walkSlideAlignSpeed: 5
   shellSlideStartSlope: 20
   shellAlignSpeed: 10
   slideSideForce: 7
@@ -1961,19 +1972,28 @@ MonoBehaviour:
   slideDirectionSmoothing: 10
   groundAlignSpeed: 6
   groundNormalSmoothing: 8
-  groundRayLength: 1
-  frontRayOffset: 0.5
-  backRayOffset: 0.5
-  sideRayOffset: 0.5
-  groundHeightSmooth: 8
+  maxGroundTiltAngle: 35
+  groundSampleCount: 4
+  groundSampleRadius: 0.4
+  groundCheckDistance: 3
+  groundLayerMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  maxSampleHeightVariance: 0.6
   gravity: -9.81
   groundedStickForce: -2
   hopDuration: 1
-  hopMoveSpeed: 4
-  hopForwardDelay: 0.15
+  hopMoveSpeed: 1.5
+  hopForwardDelay: 0.3
   shellTransitionDuration: 0.5
   digDuration: 1
   sandHoldThreshold: 0.2
+  showGroundRayGizmos: 1
+  gizmoRayHitColor: {r: 0, g: 1, b: 0, a: 1}
+  gizmoRayMissColor: {r: 1, g: 0, b: 0, a: 1}
+  gizmoRayDiscardedColor: {r: 1, g: 0.6, b: 0, a: 1}
+  gizmoNormalLength: 0.5
+  gizmoHitSphereRadius: 0.05
 --- !u!143 &1650915014
 CharacterController:
   m_ObjectHideFlags: 0
