@@ -44,6 +44,7 @@ namespace Game.Interaction
         public GameObject Initiator;
         public InteractionOrgan Organ;
         public InteractionPhase Phase;
+        public Transform AttachPoint; // Hold/Carry sırasında nesnenin parent'lanacağı nokta
     }
 
     public interface IInteractable

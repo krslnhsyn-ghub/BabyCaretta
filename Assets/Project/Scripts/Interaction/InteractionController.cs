@@ -31,6 +31,15 @@
 //
 // Not: Box/Cone collider yerine "OverlapSphere + açı filtresi" kullanıyoruz —
 // aynı "koni" etkisini verir ama yeni bir geometri türü öğrenmeye gerek kalmaz.
+//
+// Not (Carry/Attach): mouthAttachPoint, sadece Mouth organı için context'e
+// dolduruluyor (context.AttachPoint). Body organının şu an bir attach
+// ihtiyacı yok, bu yüzden Body için AttachPoint her zaman null geçiyor.
+//
+// Not (Engel Kontrolü): HoldTick sırasında, tutulan nesne bir CarryableItem
+// ise onun IsObstructed durumu da kontrol edilir — menzil dışına çıkma ile
+// aynı yoldan (HoldEnd) sonlanır. Karar burada verilir, CarryableItem sadece
+// durumunu bildirir (sorumluluk ayrımı korunur).
 // ============================================================
 using UnityEngine;
 
@@ -47,13 +56,16 @@ namespace Game.Interaction
         [Header("Tap / Hold Ayarı")]
         [SerializeField] private float holdThreshold = 0.2f; // bu süreden kısa basışlar Tap, uzun basışlar Hold sayılır
 
+        [Header("Attach Noktaları")]
+        [SerializeField] private Transform mouthAttachPoint;
+
         private Animator animator;
         // UpperBody Layer
         [SerializeField] private string upperBodyLayerName = "UpperBody_Mouth";
         [SerializeField] private float upperBodyBlendSpeed = 8f;
 
         private int upperBodyLayerIndex;
-        private float upperBodyTargetWeight;         
+        private float upperBodyTargetWeight;
 
         // Mouth ve Body için ayrı ayrı takip edilmesi gereken küçük bir durum grubu.
         // İkisi de aynı şekle sahip olduğu için tek bir iç sınıfta topladık (kod tekrarını önlemek için).
@@ -74,27 +86,29 @@ namespace Game.Interaction
             animator = GetComponent<Animator>();
             upperBodyLayerIndex = animator.GetLayerIndex(upperBodyLayerName);
 
-if (upperBodyLayerIndex == -1)
-{
-    Debug.LogError($"Animator Layer bulunamadı: {upperBodyLayerName}");
-}
+            if (upperBodyLayerIndex == -1)
+            {
+                Debug.LogError($"Animator Layer bulunamadı: {upperBodyLayerName}");
+            }
         }
+
         private void Update()
         {
-        AnimatorStateInfo state =
-        animator.GetCurrentAnimatorStateInfo(upperBodyLayerIndex);
+            AnimatorStateInfo state =
+                animator.GetCurrentAnimatorStateInfo(upperBodyLayerIndex);
 
-        upperBodyTargetWeight = state.IsTag("UpperBody") ? 1f : 0f;
+            upperBodyTargetWeight = state.IsTag("UpperBody") ? 1f : 0f;
 
-        float currentWeight = animator.GetLayerWeight(upperBodyLayerIndex);
+            float currentWeight = animator.GetLayerWeight(upperBodyLayerIndex);
 
-        animator.SetLayerWeight(
-        upperBodyLayerIndex,
-        Mathf.MoveTowards(
-            currentWeight,
-            upperBodyTargetWeight,
-            upperBodyBlendSpeed * Time.deltaTime));
-}
+            animator.SetLayerWeight(
+                upperBodyLayerIndex,
+                Mathf.MoveTowards(
+                    currentWeight,
+                    upperBodyTargetWeight,
+                    upperBodyBlendSpeed * Time.deltaTime));
+        }
+
         // TurtleController her karede, her organ için bu fonksiyonu çağırır.
         public void UpdateOrganInput(InteractionOrgan organ, bool isPressed, bool wasPressedThisFrame, bool wasReleasedThisFrame)
         {
@@ -112,10 +126,14 @@ if (upperBodyLayerIndex == -1)
                 state.awaitingDecision = false;
                 BeginHold(organ, state);
             }
-            // Zaten Hold modundaysak: nesne hâlâ menzildeyse HoldTick, değilse tutma otomatik biter.
+            // Zaten Hold modundaysak: nesne hâlâ menzildeyse VE engelde değilse HoldTick,
+            // değilse tutma otomatik biter.
             else if (state.isHolding)
             {
-                if (IsStillInRange(state.heldTargetTransform))
+                var carryable = state.heldTarget as CarryableItem;
+                bool obstructed = carryable != null && carryable.IsObstructed;
+
+                if (IsStillInRange(state.heldTargetTransform) && !obstructed)
                 {
                     SendPhase(state.heldTarget, organ, InteractionPhase.HoldTick);
                 }
@@ -177,7 +195,13 @@ if (upperBodyLayerIndex == -1)
 
         private void TryTap(InteractionOrgan organ)
         {
-            var context = new InteractionContext { Initiator = gameObject, Organ = organ, Phase = InteractionPhase.Tap };
+            var context = new InteractionContext
+            {
+                Initiator = gameObject,
+                Organ = organ,
+                Phase = InteractionPhase.Tap,
+                AttachPoint = organ == InteractionOrgan.Mouth ? mouthAttachPoint : null
+            };
             var (target, targetTransform) = FindNearestInteractable(context);
             if (target == null) return;
 
@@ -188,7 +212,13 @@ if (upperBodyLayerIndex == -1)
 
         private void BeginHold(InteractionOrgan organ, OrganState state)
         {
-            var context = new InteractionContext { Initiator = gameObject, Organ = organ, Phase = InteractionPhase.HoldStart };
+            var context = new InteractionContext
+            {
+                Initiator = gameObject,
+                Organ = organ,
+                Phase = InteractionPhase.HoldStart,
+                AttachPoint = organ == InteractionOrgan.Mouth ? mouthAttachPoint : null
+            };
             var (target, targetTransform) = FindNearestInteractable(context);
             if (target == null) return; // tutacak bir şey yoksa Hold hiç başlamaz
 
@@ -203,7 +233,13 @@ if (upperBodyLayerIndex == -1)
         private void SendPhase(IInteractable target, InteractionOrgan organ, InteractionPhase phase)
         {
             if (target == null) return;
-            var context = new InteractionContext { Initiator = gameObject, Organ = organ, Phase = phase };
+            var context = new InteractionContext
+            {
+                Initiator = gameObject,
+                Organ = organ,
+                Phase = phase,
+                AttachPoint = organ == InteractionOrgan.Mouth ? mouthAttachPoint : null
+            };
             target.OnInteract(context);
         }
 
