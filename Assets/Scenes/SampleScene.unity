@@ -2316,12 +2316,13 @@ GameObject:
   m_Component:
   - component: {fileID: 1650915015}
   - component: {fileID: 1650915014}
-  - component: {fileID: 1650915013}
+  - component: {fileID: 1650915022}
   - component: {fileID: 1650915017}
   - component: {fileID: 1650915016}
   - component: {fileID: 1650915018}
   - component: {fileID: 1650915019}
   - component: {fileID: 1650915020}
+  - component: {fileID: 1650915021}
   m_Layer: 0
   m_Name: Turtle
   m_TagString: Untagged
@@ -2329,103 +2330,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1650915013
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1650915012}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0599da3219b013d48ab217e7d5457d2f, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Game.Character.TurtleController
-  moveSpeed: 4
-  moveRotationSpeed: 6
-  turnInPlaceSpeed: 45
-  backwardMoveMultiplier: 0.4
-  moveAccelerationTime: 0.15
-  moveDecelerationTime: 0.12
-  maxWalkableSlope: 44
-  walkSpeedBySlope:
-    serializedVersion: 2
-    m_Curve:
-    - serializedVersion: 3
-      time: 0.00000166893
-      value: 0.9980976
-      inSlope: -0.011086865
-      outSlope: -0.011086865
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0.34333223
-    - serializedVersion: 3
-      time: 0.55165815
-      value: 0.859741
-      inSlope: -0.65894026
-      outSlope: -0.65894026
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0.33333334
-      outWeight: 0.33333334
-    - serializedVersion: 3
-      time: 0.9966667
-      value: 0.0019029203
-      inSlope: -1.9980943
-      outSlope: -1.9980943
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0.030100474
-      outWeight: 0
-    m_PreInfinity: 2
-    m_PostInfinity: 2
-    m_RotationOrder: 4
-  walkSlideFriction: 4
-  shellSlideStartSlope: 20
-  shellAlignSpeed: 10
-  slideSideForce: 7
-  sideInfluenceFade: 0.5
-  shellSlideAcceleration: 6
-  shellSlideMaxSpeed: 20
-  shellSlideFriction: 4
-  shellSlideSpeedMultiplier: 1
-  shellSlideStartBoost: 2
-  slideDirectionSmoothing: 10
-  groundAlignSpeed: 6
-  groundNormalSmoothing: 8
-  maxGroundTiltAngle: 35
-  groundSampleCount: 4
-  groundSampleRadius: 0.4
-  groundCheckDistance: 3
-  groundLayerMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  maxSampleHeightVariance: 0.6
-  gravity: -9.81
-  groundedStickForce: -2
-  hopDuration: 1
-  hopMoveSpeed: 1.5
-  hopForwardDelay: 0.3
-  shellTransitionDuration: 0.5
-  digDuration: 1
-  sandHoldThreshold: 0.2
-  sandEffectRadius: 2
-  sandEffectAngle: 90
-  sandStunDuration: 2
-  stunnableMask:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  sandDigParticle: {fileID: 183488454}
-  sandBurrowParticle: {fileID: 685143210}
-  digSpawnPoint: {fileID: 8661087}
-  burrowSpawnPoint: {fileID: 512793688}
-  showGroundRayGizmos: 1
-  gizmoRayHitColor: {r: 0, g: 1, b: 0, a: 1}
-  gizmoRayMissColor: {r: 1, g: 0, b: 0, a: 1}
-  gizmoRayDiscardedColor: {r: 1, g: 0.6, b: 0, a: 1}
-  gizmoNormalLength: 0.5
-  gizmoHitSphereRadius: 0.05
 --- !u!143 &1650915014
 CharacterController:
   m_ObjectHideFlags: 0
@@ -2604,6 +2508,106 @@ MonoBehaviour:
   - {fileID: 1584407261}
   - {fileID: 1207038447}
   - {fileID: 406143849}
+--- !u!114 &1650915021
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1650915012}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bb1d61bc290a9324c9c1136db2870986, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Game.Predators.TurtlePredatorTarget
+--- !u!114 &1650915022
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1650915012}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0191a00a5f39c9b469c63c992b396d0b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Game.Character.TurtleController
+  moveSpeed: 3
+  moveRotationSpeed: 10
+  turnInPlaceSpeed: 90
+  backwardMoveMultiplier: 0.6
+  moveAccelerationTime: 0.15
+  moveDecelerationTime: 0.12
+  maxWalkableSlope: 45
+  walkSpeedBySlope:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: -1
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: -1
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  walkSlideFriction: 4
+  shellSlideStartSlope: 20
+  shellAlignSpeed: 8
+  slideSideForce: 5
+  sideInfluenceFade: 0.5
+  shellSlideAcceleration: 6
+  shellSlideMaxSpeed: 8
+  shellSlideFriction: 4
+  shellSlideSpeedMultiplier: 1
+  shellSlideStartBoost: 1.2
+  slideDirectionSmoothing: 10
+  groundAlignSpeed: 6
+  groundNormalSmoothing: 8
+  maxGroundTiltAngle: 35
+  groundSampleCount: 4
+  groundSampleRadius: 0.4
+  groundCheckDistance: 1.5
+  groundLayerMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  maxSampleHeightVariance: 0.6
+  gravity: -9.81
+  groundedStickForce: -2
+  hopDuration: 1.167
+  hopMoveSpeed: 2
+  hopForwardDelay: 0.15
+  shellTransitionDuration: 0.5
+  digDuration: 1
+  sandHoldThreshold: 0.2
+  sandEffectRadius: 2
+  sandEffectAngle: 90
+  sandStunDuration: 2
+  stunnableMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  sandDigParticle: {fileID: 183488454}
+  sandBurrowParticle: {fileID: 685143210}
+  digSpawnPoint: {fileID: 147520043}
+  burrowSpawnPoint: {fileID: 496948180}
+  showGroundRayGizmos: 1
+  gizmoRayHitColor: {r: 0, g: 1, b: 0, a: 1}
+  gizmoRayMissColor: {r: 1, g: 0, b: 0, a: 1}
+  gizmoRayDiscardedColor: {r: 1, g: 0.6, b: 0, a: 1}
+  gizmoNormalLength: 0.5
+  gizmoHitSphereRadius: 0.05
 --- !u!1 &1782700439
 GameObject:
   m_ObjectHideFlags: 0

@@ -44,7 +44,19 @@ namespace Game.Character
         [SerializeField] private float positionLerpSpeed = 15f;
         [SerializeField] private float rotationLerpSpeed = 15f;
 
-        private void LateUpdate()
+                /// <summary>
+        /// Predator sistemi (yengeç vb.) için rastgele bir bacağın gerçek kemik (Tip Bone)
+        /// referansını döndürür. IK aktif olsun olmasın kullanılabilir - sadece hiyerarşideki
+        /// referansı okur, IK constraint'e dokunmaz.
+        /// </summary>
+        public Transform GetRandomFootTransform()
+        {
+            if (legs == null || legs.Length == 0) return null;
+            int index = Random.Range(0, legs.Length);
+            return legs[index].animatedFoot;
+        }
+
+private void LateUpdate()
         {
             foreach (var leg in legs)
             {

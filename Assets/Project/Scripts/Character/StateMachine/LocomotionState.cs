@@ -99,7 +99,7 @@ namespace Game.Character.States
             // shell slide ayarlarından tamamen bağımsız olmalı.
             // Geri geri (S) yürürken ayrı bir çarpan uygulanır - ileri hızdan bağımsız ayarlanabilir.
             float directionMultiplier = forwardInput < 0f ? controller.BackwardMoveMultiplier : 1f;
-            float targetSpeed = controller.MoveSpeed * speedMultiplier * directionMultiplier;
+            float targetSpeed = controller.MoveSpeed * speedMultiplier * directionMultiplier * controller.RestrainedSpeedMultiplier;
 
             // Sadece GERÇEKTEN yukarı tırmanmaya çalışırken (movingUphill, W ya da S fark etmez) ve
             // eşik aşılmışsa kay. Aynı dik zeminde aşağı inerken (movingUphill == false) tetiklenmemeli.
