@@ -27,14 +27,19 @@
 
 ---
 
-## 3. Mimari Kararı: Tek Sistem, Çoklu Görünüm
+## 3. Mimari Kararı: Unity Behavior (Behavior Tree)
 
-Ayrı ayrı script yazmak yerine:
+Predator davranışları için **Unity Behavior** paketi (Unity'nin resmi, ücretsiz behavior tree aracı) kullanılacak — üçüncü parti Behavior Designer değil.
 
-- **`PredatorController`** — tüm predator tiplerinde ortak davranışı yöneten tek script
-- **`PredatorData` (ScriptableObject)** — her tip için farklı veri: yakalama ihtimali, escape yöntemi, escape süresi, stackable olup olmadığı, yakalanma sonucu, görsel prefab
+**Neden:** Behavior Designer'ın yeni nesil sürümü (Pro), eski sürümle geriye dönük uyumlu değil — üçüncü parti asset'lerde büyük sürüm geçişlerinde bu tür kırılma riski var. Unity Behavior ise resmi paket, ücretsiz, Unity 6 ile entegre, no-code ayarlamaya (olasılık/eşik/süre gibi parametreleri kod açmadan grafikten değiştirme) izin veriyor — beginner seviyeye ve UE5 Blueprint alışkanlığına daha uygun.
 
-**Sonuç:** Kayalık yaratığı gibi "aynı mantık, farklı görünüm" istekleri yeni kod değil, yeni bir `PredatorData` asset'i + yeni prefab ile çözülür.
+**Yapı:**
+- Her predator tipi kendi **Behavior Tree** asset'ine sahip (Sequence/Condition/Action node'lardan oluşan görsel graph)
+- Ortak veri **Blackboard** üzerinden taşınır (hedef/turtle referansı, mesafe, escape durumu vs.)
+- Yakalama, tespit gibi özel mantıklar **custom Action/Condition node'ları** (C# script) olarak bir kere yazılır; sonrasında olasılık/süre/mesafe gibi ince ayarlar kod açmadan, doğrudan Unity Behavior editöründen değiştirilebilir
+- Kaplumbağa ↔ predator iletişimi yine **event tabanlı** kalır (predator bir Action node içinde event fırlatır, kaplumbağa dinler; kaplumbağa struggle sonucunu event olarak geri yollar)
+
+**Sonuç:** Kayalık yaratığı gibi "aynı mantık, farklı görünüm" istekleri yeni kod değil, yengecin tree'sinin kopyalanıp farklı model/parametrelerle kullanılmasıyla çözülür.
 
 ---
 
