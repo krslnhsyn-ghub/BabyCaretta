@@ -25,3 +25,11 @@
 * Gövdenin zemin eğimine göre otomatik tilt (pitch/roll) alması eklendi — yaw'a dokunmadan, ileride eklenecek IK ayak sistemine temel oluşturacak şekilde  
 * Zemin normali için ayrı bir yumuşatma katmanı eklendi — köşeli/engebeli objeler üzerinden geçişte ani sıçramaları önlemek için
 
+19 - 22 Temmuz
+
+* MLB basılı tutarak obje taşıma eklendi.
+* E ye basınca kum atma hareketine etkileşim alanı eklendi ve IStunnable scripti ile etkileşim eklendi. inspectordan kum atma çapı ve açısı stun süresi eklendi
+* Ayakların yere temasını sağlamak için Two bone IK Contraint ve scripti eklendi ama kemikler uygun olmadığı için doğru çalışmıyor şu an
+* Smooth hızlanma ve yavaşlama eklendi
+* E'ye kısa basış (Dig) kum particle'ı: Hayır, henüz eklemedik. TurtleController'da şu an sadece ApplySandStunEffect() çağrısı var, particle tetikleme kodu yok.
+* E'ye uzun basış (Burrow) — hem IsHidden hem gömülme particle'ı: IsHidden bayrağı zaten eklendi (bir önceki mesajda), ama gömülme particle'ı henüz yok.

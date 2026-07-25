@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 using Game.Interaction;
+using Game.Character.States;
 
 // ============================================================
 // TurtleController.cs
@@ -42,14 +43,30 @@ using Game.Interaction;
 //   Update() içinde canInteract bayrağını kullanabilirsiniz.
 //
 // İçerdiği fonksiyonlar:
-//   - Awake()                 : referansları alır
-//   - Update()                : input okur, switch ile state mantığını çalıştırır, etkileşimi iletir
-//   - UpdateShellInput()      : Q tuşunu okur, Shell state geçişlerini tetikler (self-action)
-//   - UpdateSandInput()       : E tuşunu okur, Dig(tap)/Burrow(hold) geçişlerini tetikler (self-action)
+//   - Awake()                 : referansları alır, State Pattern altyapısını (Context/StateMachine) kurar
+//   - Update()                : input okur, HER CharacterState'i ilgili State'e devreder (artık eski
+//                               switch yok - her state kendi dosyasında yaşıyor)
 //   - OnAnimatorMove()        : root motion'ı (sadece Y) CharacterController'a aktarır
 //   - ReadMoveInput()         : WASD/ok tuşlarından ham girdi okur
 //   - ReadHopInput()          : Hop tuşunu (Space) okur
 //   - GetGroundInfo()         : zemin eğimi, normal ve aşağı/yön vektörlerini döndürür
+//   - EnterSlideFromLocomotion()    : LocomotionState çok dik yokuşta "devret" dediğinde çağrılır
+//   - EnterShellSlideFromShell()    : ShellState (ShellIdle) çok dik yokuşta "devret" dediğinde çağrılır
+//   - ResetSlideMotion()            : ShellState kabuktan çıkarken kaymayı sıfırlamak için çağırır
+//
+// NOT: Tüm state mantığı State Pattern'e taşındı, bu dosyada artık hiçbir state'in per-frame
+// mantığı yok - sadece kurulum, input okuma ve State'lere devretme:
+//   - ITurtleState.cs           : her state'in uyacağı arayüz (Enter/Tick/Exit)
+//   - TurtleContext.cs          : state'lerin ihtiyaç duyduğu paylaşılan referanslar
+//   - TurtleStateMachine.cs     : aktif state'i tutan ve Tick'i ona delege eden yapı
+//   - States/LocomotionState.cs : Idle/Walk/Turn mantığının kendisi
+//   - States/HopState.cs        : Hop mantığının kendisi
+//   - States/ShellState.cs      : ShellEnter/ShellIdle/ShellExit (ShellState.HandleInput() Q tuşunu
+//                                 okuyup Shell'e giriş/çıkışı tetikler - her karede çağrılır)
+//   - States/SlideState.cs      : Slide + ShellSlide mantığının kendisi (ikisi kayma hızı/yönü
+//                                 alanlarını paylaştığı için tek dosyada)
+//   - States/SandState.cs       : Dig + Burrow (SandState.HandleInput() E tuşunu okuyup Dig/Burrow'a
+//                                 giriş/çıkışı tetikler - her karede çağrılır)
 // ============================================================
 namespace Game.Character
 {
@@ -98,14 +115,14 @@ namespace Game.Character
         [SerializeField] private AnimationCurve walkSpeedBySlope = AnimationCurve.Linear(0f, 1f, 1f, 0f); // Eğim 0 => %100 hız, max => %0
 
         // ----------------- Walk Slide specific (yürürken aşırı eğimde) -----------------
-        // NOT: Bu grup SADECE HandleSimpleSlide() içinde kullanılır; Shell Slide ile
+        // NOT: Bu grup SADECE SlideState'in düz Slide mantığında kullanılır; Shell Slide ile
         // hiçbir field paylaşılmaz, biri diğerini etkilemesin diye.
         [Header("Yürüyüş Kayması (Slide) Ayarları")]
         [Tooltip("Yürüyüş kayması sürtünmesi (m/s²)")]
         [SerializeField] private float walkSlideFriction = 4f;
 
         // ----------------- Shell Slide specific -----------------
-        // NOT: Bu grup SADECE HandleShellSlide() içinde kullanılır.
+        // NOT: Bu grup SADECE SlideState'in ShellSlide mantığında kullanılır.
         [Header("Kabuk Kayma (Shell Slide) Ayarları")]
         [Tooltip("Kabukta kaymaya başlayacak minimum eğim (derece)")]
         [SerializeField] private float shellSlideStartSlope = 20f;
@@ -171,6 +188,20 @@ namespace Game.Character
         [SerializeField] private float digDuration = 1.0f;      // Dig (tap) animasyon süresi (dummy tahmin)
         [SerializeField] private float sandHoldThreshold = 0.2f; // bu süreden kısa E basışı Dig, uzununu Burrow sayılır
 
+        [Header("Kum Serpme Etkisi (E - Tap/Dig anında, koni içindeki IStunnable'lara)")]
+        [SerializeField] private float sandEffectRadius = 2f;
+        [SerializeField] private float sandEffectAngle = 90f;   // derece, görüş açısı (koni)
+        [SerializeField] private float sandStunDuration = 2f;
+        [SerializeField] private LayerMask stunnableMask = ~0;
+
+        [Header("Kum Parçacık Efektleri")]
+        [SerializeField] private ParticleSystem sandDigParticle;
+        [SerializeField] private ParticleSystem sandBurrowParticle;
+
+        [Header("Kum Parçacık Spawn Noktaları")]
+        [SerializeField] private Transform digSpawnPoint;
+        [SerializeField] private Transform burrowSpawnPoint;
+
         // ===================== Cached Components =====================
         private CharacterController controller;
         private Animator animator;
@@ -178,64 +209,161 @@ namespace Game.Character
         private Vector3 verticalVelocity;
 
         // ===================== Animator Parameter Hashes =====================
-        private static readonly int SpeedHash = Animator.StringToHash("Speed");
-        private static readonly int TurnDirectionHash = Animator.StringToHash("TurnDirection");
-        private static readonly int IsSlidingHash = Animator.StringToHash("IsSliding");
-        private static readonly int IsRunnerHash = Animator.StringToHash("IsRunner");
-        private static readonly int IsBurrowingHash = Animator.StringToHash("IsBurrowing");
-        private static readonly int ShellEnterHash = Animator.StringToHash("ShellEnter");
-        private static readonly int ShellExitHash = Animator.StringToHash("ShellExit");
-        private static readonly int DigHash = Animator.StringToHash("Dig");
-        private static readonly int HopHash = Animator.StringToHash("Hop");
+        // NOT: Speed/TurnDirection/IsSliding/IsRunner/ShellEnter/ShellExit/Hop hash'leri
+        // LocomotionState/HopState/ShellState tarafından da kullanıldığı için internal.
+        internal static readonly int SpeedHash = Animator.StringToHash("Speed");
+        internal static readonly int TurnDirectionHash = Animator.StringToHash("TurnDirection");
+        internal static readonly int IsSlidingHash = Animator.StringToHash("IsSliding");
+        internal static readonly int IsRunnerHash = Animator.StringToHash("IsRunner");
+        internal static readonly int IsBurrowingHash = Animator.StringToHash("IsBurrowing");
+        internal static readonly int ShellEnterHash = Animator.StringToHash("ShellEnter");
+        internal static readonly int ShellExitHash = Animator.StringToHash("ShellExit");
+        internal static readonly int DigHash = Animator.StringToHash("Dig");
+        internal static readonly int HopHash = Animator.StringToHash("Hop");
+
+        // ===================== Locomotion Tuning'e Salt-Okunur Erişim =====================
+        // NOT: Bu property'ler Inspector alanlarını KOPYALAMIYOR, doğrudan aynı alana bakıyor.
+        // Böylece Play modunda Inspector'dan değer değiştirsen bile LocomotionState anında
+        // güncel değeri görür (davranış hiçbir şekilde değişmez).
+        public float MoveSpeed => moveSpeed;
+        public float MoveRotationSpeed => moveRotationSpeed;
+        public float TurnInPlaceSpeed => turnInPlaceSpeed;
+        public float BackwardMoveMultiplier => backwardMoveMultiplier;
+        public float MoveAccelerationTime => moveAccelerationTime;
+        public float MoveDecelerationTime => moveDecelerationTime;
+        public float MaxWalkableSlope => maxWalkableSlope;
+        public AnimationCurve WalkSpeedBySlope => walkSpeedBySlope;
+
+        // ===================== Hop Tuning'e Salt-Okunur Erişim =====================
+        public float HopDuration => hopDuration;
+        public float HopMoveSpeed => hopMoveSpeed;
+        public float HopForwardDelay => hopForwardDelay;
+
+        // ===================== Shell Tuning'e Salt-Okunur Erişim =====================
+        // NOT: shellSlideStartSlope burada da lazım çünkü ShellIdle -> ShellSlide geçiş
+        // kontrolü (çok dikte Q basılıyken kaymaya başlama) ShellState'e taşındı.
+        public float ShellTransitionDuration => shellTransitionDuration;
+        public float ShellSlideStartSlope => shellSlideStartSlope;
+        public float ShellSlideStartBoost => shellSlideStartBoost;
+
+        // ===================== Slide/ShellSlide Tuning'e Salt-Okunur Erişim =====================
+        public float WalkSlideFriction => walkSlideFriction;
+        public float Gravity => gravity;
+        public float ShellAlignSpeed => shellAlignSpeed;
+        public float ShellSlideAcceleration => shellSlideAcceleration;
+        public float ShellSlideSpeedMultiplier => shellSlideSpeedMultiplier;
+        public float ShellSlideMaxSpeed => shellSlideMaxSpeed;
+        public float ShellSlideFriction => shellSlideFriction;
+        public float SideInfluenceFade => sideInfluenceFade;
+        public float SlideSideForce => slideSideForce;
+        public float SlideDirectionSmoothing => slideDirectionSmoothing;
+
+        // ===================== Sand (Dig/Burrow) Tuning'e Salt-Okunur Erişim =====================
+        public float GroundCheckDistance => groundCheckDistance;
+        public LayerMask GroundLayerMask => groundLayerMask;
+        public float SandHoldThreshold => sandHoldThreshold;
+        public float DigDuration => digDuration;
+        public float SandEffectRadius => sandEffectRadius;
+        public float SandEffectAngle => sandEffectAngle;
+        public float SandStunDuration => sandStunDuration;
+        public LayerMask StunnableMask => stunnableMask;
+        public ParticleSystem SandDigParticle => sandDigParticle;
+        public ParticleSystem SandBurrowParticle => sandBurrowParticle;
+        public Transform DigSpawnPoint => digSpawnPoint;
+        public Transform BurrowSpawnPoint => burrowSpawnPoint;
 
         // ===================== State Variables =====================
-        private CharacterState currentState = CharacterState.Idle;
+        // NOT: Idle/Walk/Turn state'lerine artık States/LocomotionState.cs karar veriyor.
+        // Bu property dışarıdan (LocomotionState dahil) okunup yazılabilsin diye public.
+        public CharacterState CurrentState { get; set; } = CharacterState.Idle;
         private Vector2 moveInput;
 
-        private float hopTimer;
-        private float actionTimer; // Shell/Dig geçişleri için ortak zamanlayıcı (Hop'un hopTimer'ından ayrı)
+        // Burrow state'indeyken true - ileride tehlike/predator AI'ları bu bayrağı okuyup
+        // kaplumbağayı "görmezden gelecek". Şimdilik sadece dışarı açılan bir bilgi.
+        public bool IsHidden { get; internal set; }
 
-        // E tuşu için Tap/Hold kararı bekleniyor mu
-        private float sandPressStartTime;
-        private bool sandAwaitingDecision;
+        // NOT: actionTimer, sandPressStartTime, sandAwaitingDecision artık burada değil -
+        // States/SandState.cs'in kendi iç değişkenleri oldu (Dig/Burrow tamamen taşındı).
 
         // Slide-specific variables
-        private float currentSlideSpeed;      // hız aşağı doğru (m/s)
-        private Vector3 slideDirection;       // ham aşağı yön (xz düzlemde normalize) - HandleWalkMovement'taki movingUphill hesabı bunu kullanır
+        // NOT: currentSlideSpeed/smoothedSlideDirection/smoothedSlideSideDirection artık burada değil -
+        // States/SlideState.cs'in kendi iç değişkenleri oldu (Slide/ShellSlide tamamen taşındı).
+        private Vector3 slideDirection;       // ham aşağı yön (xz düzlemde normalize) - LocomotionState'teki movingUphill hesabı bunu kullanır
         private Vector3 slideSideDirection;   // ham sağ-sol yön (düzlemde normalize)
-
-        // Yumuşatılmış kayma yönleri - SADECE HandleSimpleSlide/HandleShellSlide içinde kullanılır,
-        // titreşimi önlemek için ham slideDirection'ı yavaşça takip eder. movingUphill hesabını etkilemez.
-        private Vector3 smoothedSlideDirection;
-        private Vector3 smoothedSlideSideDirection;
 
         // Gövde-zemin uyumu için yumuşatılmış zemin normali (AlignBodyToGround() kullanır)
         private Vector3 smoothedGroundNormal = Vector3.up;
 
-        // Yürüme ivmelenmesi için o anki (yumuşatılmış) hız - hedef hıza MoveTowards ile yaklaşır
-        private float currentMoveSpeed;
+        // ===================== State Pattern altyapısı =====================
+        // NOT: currentMoveSpeed artık burada değil - LocomotionState'in kendi iç değişkeni oldu,
+        // çünkü sadece yürüyüş ease-in/out'unu ilgilendiriyor.
+        private TurtleContext context;
+        private TurtleStateMachine stateMachine;
+        private LocomotionState locomotionState;
+        private HopState hopState;
+        private ShellState shellState;
+        private SlideState slideState;
+        private SandState sandState;
 
         private void Awake()
         {
             controller = GetComponent<CharacterController>();
             animator = GetComponent<Animator>();
             interactionController = GetComponent<InteractionController>();
+
+            context = new TurtleContext(this, controller, animator);
+            stateMachine = new TurtleStateMachine();
+            locomotionState = new LocomotionState();
+            hopState = new HopState();
+            shellState = new ShellState();
+            slideState = new SlideState();
+            sandState = new SandState();
+        }
+
+        /// <summary>
+        /// LocomotionState (Walk) çok dik bir yokuşta yukarı tırmanmaya çalışırken buraya
+        /// "devret" der. Gerçek kayma mantığı artık SlideState'te yaşıyor; bu metod sadece
+        /// state'i değiştirip başlangıç hızını devrediyor.
+        /// </summary>
+        public void EnterSlideFromLocomotion(float carryOverSpeed)
+        {
+            CurrentState = CharacterState.Slide;
+            slideState.StartWalkSlide(carryOverSpeed);
+        }
+
+        /// <summary>
+        /// ShellState (ShellIdle) kabuktayken çok dik bir zeminde Q basılı tutulursa buraya
+        /// "devret" der. Gerçek kayma mantığı artık SlideState'te yaşıyor; bu metod sadece
+        /// state'i değiştirip başlangıç hızını devrediyor.
+        /// </summary>
+        public void EnterShellSlideFromShell(float startBoostSpeed)
+        {
+            CurrentState = CharacterState.ShellSlide;
+            slideState.StartShellSlide(startBoostSpeed);
+        }
+
+        /// <summary>
+        /// ShellState, Q'ya tekrar basılıp kabuktan çıkılırken (ShellIdle/ShellSlide -> ShellExit)
+        /// varsa devam eden kaymayı sıfırlamak için bunu çağırır. Kayma hızı/yönü artık SlideState'in
+        /// private alanları olduğu için dışarıdan doğrudan erişilemiyor, SlideState üzerinden sıfırlanıyor.
+        /// </summary>
+        public void ResetSlideMotion()
+        {
+            slideState.ResetSlideMotion();
         }
 
         private void Update()
         {
             // ---------- Input ----------
             moveInput = ReadMoveInput();
-            bool hasForwardInput = Mathf.Abs(moveInput.y) > 0.01f;
-            bool hasTurnInput = Mathf.Abs(moveInput.x) > 0.01f;
 
             // ---------- Self-action busy check ----------
             bool isBusyWithSelfAction =
-                currentState == CharacterState.ShellEnter ||
-                currentState == CharacterState.ShellIdle ||
-                currentState == CharacterState.ShellExit ||
-                currentState == CharacterState.Dig ||
-                currentState == CharacterState.Burrow;
+                CurrentState == CharacterState.ShellEnter ||
+                CurrentState == CharacterState.ShellIdle ||
+                CurrentState == CharacterState.ShellExit ||
+                CurrentState == CharacterState.Dig ||
+                CurrentState == CharacterState.Burrow;
 
             // ---------- Ground info ----------
             bool groundInfo = GetGroundInfo(out float slopeAngle, out Vector3 groundNormal,
@@ -254,18 +382,18 @@ namespace Game.Character
             slideSideDirection = sideDir;
 
             // ---------- Hop ----------
-            if (ReadHopInput() && currentState != CharacterState.Hop && !isBusyWithSelfAction)
+            // NOT: hopTimer sıfırlama ve animator.SetTrigger artık burada değil - HopState.Enter()'da,
+            // çünkü CurrentState = Hop olur olmaz state machine aynı karede Enter()'ı zaten çağıracak.
+            if (ReadHopInput() && CurrentState != CharacterState.Hop && !isBusyWithSelfAction)
             {
-                currentState = CharacterState.Hop;
-                hopTimer = 0f;
-                animator.SetTrigger(HopHash);
+                CurrentState = CharacterState.Hop;
             }
 
             // ---------- Shell input ----------
-            UpdateShellInput();
+            shellState.HandleInput(context);
 
             // ---------- Sand input ----------
-            UpdateSandInput();
+            sandState.HandleInput(context);
 
             // ---------- Interaction ----------
             var mouse = Mouse.current;
@@ -282,115 +410,42 @@ namespace Game.Character
             }
 
             // ---------- State machine ----------
-            switch (currentState)
+            // Artık her CharacterState bir state dosyasına karşılık geliyor:
+            // Idle/Walk/Turn -> LocomotionState, Hop -> HopState, Shell* -> ShellState,
+            // Slide/ShellSlide -> SlideState, Dig/Burrow -> SandState.
+            context.MoveInput = moveInput;
+            context.SlopeAngle = slopeAngle;
+            context.SlideDirection = slideDirection;
+            context.SlideSideDirection = slideSideDirection;
+            context.HasGroundContact = groundInfo;
+
+            ITurtleState desiredState;
+            if (CurrentState == CharacterState.Idle || CurrentState == CharacterState.Walk || CurrentState == CharacterState.Turn)
             {
-                case CharacterState.Idle:
-                    animator.SetFloat(SpeedHash, 0f);
-                    animator.SetFloat(TurnDirectionHash, 0f);
-                    animator.SetBool(IsSlidingHash, false);
-                    animator.SetBool(IsRunnerHash, false);
-                    if (hasForwardInput) currentState = CharacterState.Walk;
-                    else if (hasTurnInput) currentState = CharacterState.Turn;
-                    break;
-
-                case CharacterState.Walk:
-                    if (!hasForwardInput)
-                    {
-                        currentState = CharacterState.Idle;
-                        currentMoveSpeed = 0f; // bir sonraki hareket başlangıcında ease-in sıfırdan başlasın
-                        break;
-                    }
-
-                    // Handle slope-based speed modulation and possible slip
-                    HandleWalkMovement(slopeAngle, moveInput.y);
-                    break;
-
-                case CharacterState.Turn:
-                    if (hasForwardInput)
-                    {
-                        currentState = CharacterState.Walk;
-                        break;
-                    }
-                    if (!hasTurnInput)
-                    {
-                        currentState = CharacterState.Idle;
-                        break;
-                    }
-                    TurnInPlace(moveInput.x);
-                    animator.SetFloat(TurnDirectionHash, moveInput.x);
-                    animator.SetBool(IsSlidingHash, false);
-                    animator.SetBool(IsRunnerHash, false);
-                    break;
-
-                case CharacterState.Hop:
-                    hopTimer += Time.deltaTime;
-                    if (hopTimer >= hopForwardDelay)
-                    {
-                        controller.Move(transform.forward * hopMoveSpeed * Time.deltaTime);
-                    }
-                    if (hopTimer >= hopDuration)
-                    {
-                        currentState = CharacterState.Idle;
-                    }
-                    break;
-
-                case CharacterState.ShellEnter:
-                    actionTimer += Time.deltaTime;
-                    if (actionTimer >= shellTransitionDuration)
-                    {
-                        currentState = CharacterState.ShellIdle;
-                    }
-                    break;
-
-                case CharacterState.ShellIdle:
-                    // Kabuktayken Q'ya BASILI TUTMAK (ham eğim değil) kaymayı tetikler.
-                    // Zemin yeterince dikse ve Q şu an basılıysa kaymaya başla.
-                    bool qHeldForSlide = Keyboard.current != null && Keyboard.current.qKey.isPressed;
-                    if (groundInfo && slopeAngle > shellSlideStartSlope && qHeldForSlide)
-                    {
-                        currentState = CharacterState.ShellSlide;
-                        // Sıfırdan değil, küçük bir itiliş hızıyla başla - "kendini ittirmiş" hissi verir
-                        currentSlideSpeed = shellSlideStartBoost;
-                        smoothedSlideDirection = Vector3.zero; // yön yumuşatmasını yeniden senkronla
-                        // İstersen burada kısa bir "itiliş" animasyon trigger'ı da tetikleyebilirsin,
-                        // örn. animator.SetTrigger(ShellSlideStartHash) - Animator Controller'ına
-                        // uygun bir trigger parametresi eklersen (root motion X/Z'yi etkilemeyecek şekilde).
-                    }
-                    break;
-
-                case CharacterState.ShellExit:
-                    actionTimer += Time.deltaTime;
-                    if (actionTimer >= shellTransitionDuration)
-                    {
-                        currentState = CharacterState.Idle;
-                    }
-                    break;
-
-                case CharacterState.Slide:
-                    // Normal yürüyüşde aşın eğimde kayma (gravity-based simple slide)
-                    HandleSimpleSlide(slopeAngle);
-                    break;
-
-                case CharacterState.ShellSlide:
-                    // Kabuk kayması: yön hizalama, ivmelenme, sürtünme, yan ağırlık
-                    HandleShellSlide(slopeAngle, moveInput.x);
-                    break;
-
-                case CharacterState.Dig:
-                    actionTimer += Time.deltaTime;
-                    if (actionTimer >= digDuration)
-                    {
-                        currentState = CharacterState.Idle;
-                    }
-                    break;
-
-                case CharacterState.Burrow:
-                    // Hold süresince buradayız, çıkışı UpdateSandInput() (E bırakılınca) tetikler.
-                    break;
+                desiredState = locomotionState;
+            }
+            else if (CurrentState == CharacterState.Hop)
+            {
+                desiredState = hopState;
+            }
+            else if (CurrentState == CharacterState.ShellEnter || CurrentState == CharacterState.ShellIdle || CurrentState == CharacterState.ShellExit)
+            {
+                desiredState = shellState;
+            }
+            else if (CurrentState == CharacterState.Slide || CurrentState == CharacterState.ShellSlide)
+            {
+                desiredState = slideState;
+            }
+            else // Dig veya Burrow
+            {
+                desiredState = sandState;
             }
 
+            stateMachine.ChangeState(desiredState, context);
+            stateMachine.Tick(context);
+
             // ---------- Gravity ----------
-            if (currentState != CharacterState.Hop && currentState != CharacterState.Slide && currentState != CharacterState.ShellSlide)
+            if (CurrentState != CharacterState.Hop && CurrentState != CharacterState.Slide && CurrentState != CharacterState.ShellSlide)
             {
                 ApplyGravity();
             }
@@ -398,7 +453,7 @@ namespace Game.Character
             // ---------- Body tilt to ground ----------
             // Hop sırasında zemine tilt yapmıyoruz (havadayken anlamsız); diğer tüm state'lerde
             // (Slide/ShellSlide dahil) gövde zemin normaline yumuşakça uyum sağlar, yaw'a dokunmadan.
-            if (currentState != CharacterState.Hop)
+            if (CurrentState != CharacterState.Hop)
             {
                 AlignBodyToGround(groundInfo, groundNormal, groundConfidence);
             }
@@ -536,282 +591,21 @@ namespace Game.Character
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, groundAlignSpeed * Time.deltaTime);
         }
 
-        /// <summary>
-        /// Walking movement with slope-based speed modulation and automatic slip when slope > maxWalkableSlope.
-        /// Speed reduction only when moving uphill; downhill or flat moves at base speed.
-        /// </summary>
-        private void HandleWalkMovement(float slopeAngle, float forwardInput)
-        {
-            // Gerçek hareket yönü: W ile ileri, S ile geri - transform.forward'ın işareti forwardInput'a göre değişir.
-            // ÖNEMLİ: "yukarı tırmanma" tespitini forwardInput'un işaretine (W/S) göre DEĞİL, bu gerçek hareket
-            // vektörünün eğime göre yönüne göre yapıyoruz. Aksi halde S ile geri geri yürüyerek (burun aşağı
-            // bakarken) çok dik yokuşları da hiç yavaşlamadan/kaymadan tırmanmak mümkün oluyordu - bu bug'dı.
-            Vector3 moveDirWorld = transform.forward * forwardInput;
-            bool isMoving = Mathf.Abs(forwardInput) > 0.01f;
-            bool movingUphill = isMoving && Vector3.Dot(moveDirWorld.normalized, slideDirection) < 0f;
+        // NOT: HandleWalkMovement buradan tamamen kaldırıldı - States/LocomotionState.cs içinde yaşıyor.
 
-            // Compute speed multiplier from slope (0 = flat, 1 = maxWalkableSlope) only if moving uphill
-            float slopeFactor = 0f;
-            if (movingUphill)
-            {
-                slopeFactor = Mathf.InverseLerp(0f, maxWalkableSlope, slopeAngle);
-                slopeFactor = Mathf.Clamp01(slopeFactor);
-            }
-            float speedMultiplier = walkSpeedBySlope.Evaluate(slopeFactor);
-            // NOT: shellSlideSpeedMultiplier buraya KASITLI olarak katılmıyor - yürüme hızı
-            // shell slide ayarlarından tamamen bağımsız olmalı.
-            // Geri geri (S) yürürken ayrı bir çarpan uygulanır - ileri hızdan bağımsız ayarlanabilir.
-            float directionMultiplier = forwardInput < 0f ? backwardMoveMultiplier : 1f;
-            float targetSpeed = moveSpeed * speedMultiplier * directionMultiplier;
+        // NOT: HandleSimpleSlide, HandleShellSlide, UpdateSmoothedSlideVectors buradan tamamen
+        // kaldırıldı - States/SlideState.cs içinde yaşıyorlar.
 
-            // Sadece GERÇEKTEN yukarı tırmanmaya çalışırken (movingUphill, W ya da S fark etmez) ve
-            // eşik aşılmışsa kay. Aynı dik zeminde aşağı inerken (movingUphill == false) tetiklenmemeli.
-            if (movingUphill && slopeAngle > maxWalkableSlope)
-            {
-                // Enter simple slide state (gravity-driven)
-                currentState = CharacterState.Slide;
-                // Ani sıfırlama yerine mevcut yürüme hızını devral - duraksama hissini azaltır
-                currentSlideSpeed = currentMoveSpeed;
-                smoothedSlideDirection = Vector3.zero; // yön yumuşatmasını yeniden senkronla
-                // slideDirection already set in Update()
-                return;
-            }
 
-            // Ease-in/out: anlık sıfırdan hıza zıplamak yerine hedef hıza yumuşakça yaklaş.
-            // İvmelenirken moveAccelerationTime, yavaşlarken (girdi bırakılınca/tersine dönünce) moveDecelerationTime kullanılır.
-            bool accelerating = Mathf.Abs(targetSpeed) > Mathf.Abs(currentMoveSpeed);
-            float easeTime = Mathf.Max(0.0001f, accelerating ? moveAccelerationTime : moveDecelerationTime);
-            float maxDelta = (moveSpeed / easeTime) * Time.deltaTime;
-            currentMoveSpeed = Mathf.MoveTowards(currentMoveSpeed, targetSpeed, maxDelta);
+        // NOT: UpdateShellInput buradan tamamen kaldırıldı - States/ShellState.cs içindeki
+        // HandleInput() metoduna taşındı.
 
-            // Normal movement: apply forward movement with potentially reduced speed
-            Vector3 moveDir = transform.forward * forwardInput;
-            controller.Move(moveDir.normalized * currentMoveSpeed * Time.deltaTime);
+        // NOT: UpdateSandInput ve ApplySandStunEffect buradan tamamen kaldırıldı -
+        // States/SandState.cs içinde yaşıyorlar.
 
-            // Apply turning (A/D) while walking
-            if (Mathf.Abs(moveInput.x) > 0.01f)
-            {
-                transform.Rotate(Vector3.up, moveInput.x * moveRotationSpeed * 10f * Time.deltaTime);
-            }
 
-            // Update animator
-            animator.SetFloat(SpeedHash, Mathf.Abs(forwardInput));
-            animator.SetFloat(TurnDirectionHash, moveInput.x);
-            animator.SetBool(IsSlidingHash, false);
-            animator.SetBool(IsRunnerHash, false);
-        }
 
-        /// <summary>
-        /// Simple gravity‑based slide used when walking on too steep a slope.
-        /// </summary>
-        private void HandleSimpleSlide(float slopeAngle)
-        {
-            // If slope becomes shallow enough, exit slide
-            if (slopeAngle <= maxWalkableSlope * 0.8f) // hysteresis to avoid jitter
-            {
-                currentState = CharacterState.Idle;
-                animator.SetBool(IsSlidingHash, false);
-                smoothedSlideDirection = Vector3.zero; // bir sonraki kayma için yeniden senkronla
-                return;
-            }
-
-            UpdateSmoothedSlideVectors();
-
-            // Accelerate due to gravity component along slope
-            float gravityComponent = Mathf.Abs(gravity) * Mathf.Sin(slopeAngle * Mathf.Deg2Rad);
-            currentSlideSpeed += gravityComponent * Time.deltaTime;
-            // Apply friction to eventually stop if slope flattens
-            currentSlideSpeed -= walkSlideFriction * Time.deltaTime;
-            currentSlideSpeed = Mathf.Max(0f, currentSlideSpeed);
-
-            // Move (yumuşatılmış yön - ham raycast normal titremesini azaltır)
-            Vector3 motion = smoothedSlideDirection * currentSlideSpeed * Time.deltaTime;
-            controller.Move(motion);
-
-            // NOT: Buraya kayma yönüne dönme (facing rotation) eklenmiyor - kullanıcı isteğiyle
-            // kaldırıldı. Karakter kayarken bakış yönünü korur, sadece pozisyon kayar.
-            // Gövdenin zemine göre tilt'i (pitch/roll) zaten AlignBodyToGround() tarafından
-            // ayrıca ve yaw'dan bağımsız olarak yapılıyor.
-
-            animator.SetBool(IsSlidingHash, true);
-            animator.SetBool(IsRunnerHash, false);
-        }
-
-        /// <summary>
-        /// Shell slide behavior: align to down slope, accelerate, friction, side weighting.
-        /// A/D tuşları karakteri döndürmez, sadece yan ağırlık verir.
-        /// </summary>
-        private void HandleShellSlide(float slopeAngle, float sideInput)
-        {
-            UpdateSmoothedSlideVectors();
-
-            // Exit condition: slope too shallow
-            if (slopeAngle <= shellSlideStartSlope * 0.8f) // hysteresis
-            {
-                // Smoothly decelerate to idle
-                currentSlideSpeed -= shellSlideFriction * Time.deltaTime;
-                if (currentSlideSpeed <= 0f)
-                {
-                    currentState = CharacterState.ShellIdle;
-                    currentSlideSpeed = 0f;
-                    smoothedSlideDirection = Vector3.zero; // bir sonraki kayma için yeniden senkronla
-                }
-                // Still apply remaining velocity this frame
-                Vector3 motion = smoothedSlideDirection * currentSlideSpeed * Time.deltaTime;
-                controller.Move(motion);
-                // Align to slope gradually
-                if (smoothedSlideDirection.sqrMagnitude > 0.0001f)
-                {
-                    Quaternion targetRot = Quaternion.LookRotation(smoothedSlideDirection, Vector3.up);
-                    transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, shellAlignSpeed * Time.deltaTime);
-                }
-                animator.SetBool(IsSlidingHash, true);
-                animator.SetBool(IsRunnerHash, false);
-                return;
-            }
-
-            // Acceleration along slope (gravity‑like but controllable)
-            float accel = shellSlideAcceleration * shellSlideSpeedMultiplier;
-            // According to spec, forward input does not affect slide speed; we ignore it.
-            currentSlideSpeed += accel * Time.deltaTime;
-            currentSlideSpeed = Mathf.Min(currentSlideSpeed, shellSlideMaxSpeed);
-
-            // Apply friction when there is no longitudinal input
-            currentSlideSpeed -= shellSlideFriction * Time.deltaTime;
-            currentSlideSpeed = Mathf.Max(0f, currentSlideSpeed);
-
-            // Sideways influence from A/D: stronger at low speed, fades as speed increases
-            float sideInfluence = 1f - Mathf.Clamp01(currentSlideSpeed / shellSlideMaxSpeed) * (1f - sideInfluenceFade);
-            float sideSpeed = sideInput * slideSideForce * sideInfluence; // NO extra Time.deltaTime here
-
-            // Combine movement vectors (yumuşatılmış yönler - titreşimi azaltır)
-            Vector3 movement = (smoothedSlideDirection * currentSlideSpeed + smoothedSlideSideDirection * sideSpeed) * Time.deltaTime;
-            controller.Move(movement);
-
-            // Align character to down slope (smooth, not instant)
-            if (smoothedSlideDirection.sqrMagnitude > 0.0001f)
-            {
-                Quaternion targetRot = Quaternion.LookRotation(smoothedSlideDirection, Vector3.up);
-                transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, shellAlignSpeed * Time.deltaTime);
-            }
-
-            // animator
-            animator.SetBool(IsSlidingHash, true);
-            animator.SetBool(IsRunnerHash, false);
-        }
-
-        /// <summary>
-        /// Ham slideDirection/slideSideDirection'ı (Update()'te raycast'ten anlık hesaplanır) yavaşça takip eden
-        /// yumuşatılmış versiyonlarını günceller. Sadece slide handler'ları çağırır - movingUphill hesabını etkilemez.
-        /// </summary>
-        private void UpdateSmoothedSlideVectors()
-        {
-            if (smoothedSlideDirection.sqrMagnitude < 0.0001f)
-            {
-                // İlk kare / yeniden senkronlama sonrası: doğrudan ham değere atla
-                smoothedSlideDirection = slideDirection;
-                smoothedSlideSideDirection = slideSideDirection;
-                return;
-            }
-
-            smoothedSlideDirection = Vector3.Slerp(smoothedSlideDirection, slideDirection, slideDirectionSmoothing * Time.deltaTime).normalized;
-            smoothedSlideSideDirection = Vector3.Slerp(smoothedSlideSideDirection, slideSideDirection, slideDirectionSmoothing * Time.deltaTime).normalized;
-        }
-
-        // ===================== Input / Self-action =====================
-        private void UpdateShellInput()
-        {
-            var keyboard = Keyboard.current;
-            if (keyboard == null) return;
-
-            // Q pressed down (yeni bir basış - basılı tutmak değil)
-            if (keyboard.qKey.wasPressedThisFrame)
-            {
-                // If we are not in shell (Idle/Walk/Turn), enter shell
-                if (currentState == CharacterState.Idle || currentState == CharacterState.Walk || currentState == CharacterState.Turn)
-                {
-                    currentState = CharacterState.ShellEnter;
-                    actionTimer = 0f;
-                    animator.SetTrigger(ShellEnterHash);
-                    return;
-                }
-                // ShellIdle veya ShellSlide'dayken tekrar Q -> kabuktan çık (kayma varsa durdurulur).
-                // Kaymayı durdurmak artık Q'yu BIRAKMAYA değil, tekrar BASMAYA bağlı.
-                if (currentState == CharacterState.ShellIdle || currentState == CharacterState.ShellSlide)
-                {
-                    currentState = CharacterState.ShellExit;
-                    actionTimer = 0f;
-                    currentSlideSpeed = 0f;
-                    smoothedSlideDirection = Vector3.zero;
-                    animator.SetBool(IsSlidingHash, false);
-                    animator.SetTrigger(ShellExitHash);
-                    return;
-                }
-                // ShellEnter veya ShellExit sırasındaysak yoksay, geçiş bitsin
-            }
-
-            // NOT: Q bırakıldığında (wasReleasedThisFrame) artık HİÇBİR ŞEY yapmıyoruz.
-            // Kayma, Q basılı tutulduğu sürece değil - tekrar Q'ya BASILANA kadar devam eder.
-        }
-
-        private void UpdateSandInput()
-        {
-            var keyboard = Keyboard.current;
-            if (keyboard == null) return;
-
-            bool canStart = currentState == CharacterState.Idle || currentState == CharacterState.Walk || currentState == CharacterState.Turn;
-
-            // Check if ground is sand
-            bool isSand = false;
-            if (canStart)
-            {
-                Vector3 origin = transform.position + Vector3.up * 0.5f;
-                if (Physics.Raycast(origin, Vector3.down, out RaycastHit hit, groundCheckDistance, groundLayerMask))
-                {
-                    isSand = hit.collider.CompareTag("Sand");
-                }
-            }
-
-            if (keyboard.eKey.wasPressedThisFrame)
-            {
-                sandPressStartTime = Time.time;
-                sandAwaitingDecision = true;
-            }
-
-            if (sandAwaitingDecision && keyboard.eKey.isPressed && Time.time - sandPressStartTime >= sandHoldThreshold)
-            {
-                sandAwaitingDecision = false;
-                if (canStart && isSand)
-                {
-                    currentState = CharacterState.Burrow;
-                    animator.SetBool(IsBurrowingHash, true);
-                }
-            }
-
-            if (keyboard.eKey.wasReleasedThisFrame)
-            {
-                if (currentState == CharacterState.Burrow)
-                {
-                    currentState = CharacterState.Idle;
-                    animator.SetBool(IsBurrowingHash, false);
-                }
-                else if (sandAwaitingDecision && canStart && isSand)
-                {
-                    currentState = CharacterState.Dig;
-                    actionTimer = 0f;
-                    animator.SetTrigger(DigHash);
-                }
-
-                sandAwaitingDecision = false;
-            }
-        }
-
-        
-        // ===================== Movement Helpers =====================
-        private void TurnInPlace(float turnDirection)
-        {
-            transform.Rotate(Vector3.up, turnDirection * turnInPlaceSpeed * Time.deltaTime);
-        }
+        // NOT: TurnInPlace buradan tamamen kaldırıldı - States/LocomotionState.cs içinde yaşıyor.
 
         private void ApplyGravity()
         {
