@@ -136,12 +136,26 @@ namespace Game.Character.States
 
             foreach (var hit in hits)
             {
+                // Skip self (the turtle) to avoid stunning ourselves
+                if (hit.gameObject == controller.gameObject)
+                {
+                    continue;
+                }
+
                 Vector3 toTarget = hit.transform.position - context.Transform.position;
                 float angle = Vector3.Angle(context.Transform.forward, toTarget);
                 if (angle > controller.SandEffectAngle * 0.5f) continue;
 
-                IStunnable stunnable = hit.GetComponent<IStunnable>();
-                stunnable?.Stun(controller.SandStunDuration);
+                IStunnable stunnable = hit.GetComponentInParent<IStunnable>();
+                if (stunnable != null)
+                {
+                    Debug.Log($"Sand stun hitting {hit.name} (parent stunnable found)");
+                    stunnable.Stun(controller.SandStunDuration);
+                }
+                else
+                {
+                    Debug.Log($"Sand hit {hit.name} but no IStunnable found in parents");
+                }
             }
         }
     }

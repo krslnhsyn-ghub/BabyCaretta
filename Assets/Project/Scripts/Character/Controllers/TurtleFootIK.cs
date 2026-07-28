@@ -56,6 +56,21 @@ namespace Game.Character
             return legs[index].animatedFoot;
         }
 
+        /// <summary>
+        /// Predator sisteminin "en yakın boş bacağı bul" mantığı için tüm bacak kemik
+        /// referanslarını döndürür (null olanlar dahil - çağıran taraf null kontrolü yapmalı).
+        /// </summary>
+        public Transform[] GetAllFootTransforms()
+        {
+            if (legs == null) return new Transform[0];
+            var result = new Transform[legs.Length];
+            for (int i = 0; i < legs.Length; i++)
+            {
+                result[i] = legs[i] != null ? legs[i].animatedFoot : null;
+            }
+            return result;
+        }
+
 private void LateUpdate()
         {
             foreach (var leg in legs)

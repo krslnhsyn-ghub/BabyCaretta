@@ -325,6 +325,119 @@ ParticleSystem:
   m_CorrespondingSourceObject: {fileID: 5003206428498789750, guid: 6fe504f46b6a40647ac9deabdcd70e2d, type: 3}
   m_PrefabInstance: {fileID: 2066057276}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &208397434
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 208397437}
+  - component: {fileID: 208397436}
+  - component: {fileID: 208397435}
+  m_Layer: 0
+  m_Name: CrabBase (1)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &208397435
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 208397434}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f0038c16c34866b4f9e25c9c0dc0f7e6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Behavior::Unity.Behavior.BehaviorGraphAgent
+  m_Graph: {fileID: -4920961095669814969, guid: 1be52b96969886547bdfcf7034e6c94a, type: 2}
+  m_BlackboardVariableOverridesList:
+  - rid: 3495279892737032512
+  - rid: 3495279892737032803
+  - rid: 3495279892737032804
+  - rid: 3495279892737032805
+  - rid: 3495279892737032814
+  m_OriginalGraph: {fileID: -4920961095669814969, guid: 1be52b96969886547bdfcf7034e6c94a, type: 2}
+  m_IsInitialised: 0
+  m_IsStarted: 0
+  references:
+    version: 2
+    RefIds:
+    - rid: 3495279892737032512
+      type: {class: 'BlackboardVariable`1[[UnityEngine.GameObject, UnityEngine.CoreModule]]', ns: Unity.Behavior, asm: Unity.Behavior}
+      data:
+        GUID:
+          m_Value0: 1
+          m_Value1: 0
+        Name: Self
+        m_Value: {fileID: 208397434}
+    - rid: 3495279892737032803
+      type: {class: 'BlackboardVariable`1[[System.Single, mscorlib]]', ns: Unity.Behavior, asm: Unity.Behavior}
+      data:
+        GUID:
+          m_Value0: 14227066497220456267
+          m_Value1: 7546513954301327711
+        Name: Speed
+        m_Value: 2
+    - rid: 3495279892737032804
+      type: {class: 'BlackboardVariable`1[[System.Single, mscorlib]]', ns: Unity.Behavior, asm: Unity.Behavior}
+      data:
+        GUID:
+          m_Value0: 8970553499345925226
+          m_Value1: 14103804576156207285
+        Name: DetectRange
+        m_Value: 10
+    - rid: 3495279892737032805
+      type: {class: 'BlackboardVariable`1[[System.Single, mscorlib]]', ns: Unity.Behavior, asm: Unity.Behavior}
+      data:
+        GUID:
+          m_Value0: 4937763551754763585
+          m_Value1: 5612753262335630215
+        Name: GrabRange
+        m_Value: 0.2
+    - rid: 3495279892737032814
+      type: {class: 'BlackboardVariable`1[[UnityEngine.Transform, UnityEngine.CoreModule]]', ns: Unity.Behavior, asm: Unity.Behavior}
+      data:
+        GUID:
+          m_Value0: 17992266168776472002
+          m_Value1: 15565580000524222454
+        Name: Target
+        m_Value: {fileID: 1650915015}
+--- !u!114 &208397436
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 208397434}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 18511641279ed1842a1c2677e9e663f3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Game.Predators.PredatorController
+  data: {fileID: 11400000, guid: 8c14e548ab0f0a54cb36d25ed04247f4, type: 2}
+  target: {fileID: 1650915021}
+--- !u!4 &208397437
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 208397434}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 2.945, y: 0, z: -5.414}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 431252373}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &230914498
 GameObject:
   m_ObjectHideFlags: 0
@@ -565,6 +678,87 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1001 &313280232
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1368170494}
+    m_Modifications:
+    - target: {fileID: -8679921383154817045, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 1.8
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 1.8
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 1.8
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 180
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: m_ConstrainProportionsScale
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -6161448157782799470, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: b0603f36fafdb9a41a9c36b2a3ecae6b, type: 2}
+    - target: {fileID: 919132149155446097, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: m_Name
+      value: Crabix
+      objectReference: {fileID: 0}
+    - target: {fileID: 5866666021909216657, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: m_Controller
+      value: 
+      objectReference: {fileID: 9100000, guid: 1892cddf285cdc64ba036d6e70448382, type: 2}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
 --- !u!1 &330585543
 GameObject:
   m_ObjectHideFlags: 0
@@ -735,6 +929,11 @@ MonoBehaviour:
       m_PostInfinity: 2
       m_RotationOrder: 4
   CustomBlends: {fileID: 0}
+--- !u!4 &365731142 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+  m_PrefabInstance: {fileID: 313280232}
+  m_PrefabAsset: {fileID: 0}
 --- !u!4 &406143849 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -1045379327507068257, guid: 86d29a0abe644d541aa982cbca32becf, type: 3}
@@ -871,6 +1070,11 @@ MonoBehaviour:
 Transform:
   m_CorrespondingSourceObject: {fileID: -8500500298570969567, guid: 86d29a0abe644d541aa982cbca32becf, type: 3}
   m_PrefabInstance: {fileID: 4014348328050617664}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &431252373 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+  m_PrefabInstance: {fileID: 1060318645}
   m_PrefabAsset: {fileID: 0}
 --- !u!1 &459657541
 GameObject:
@@ -1047,6 +1251,119 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 8835572033850230739, guid: 86d29a0abe644d541aa982cbca32becf, type: 3}
   m_PrefabInstance: {fileID: 4014348328050617664}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &478572751
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 478572754}
+  - component: {fileID: 478572753}
+  - component: {fileID: 478572752}
+  m_Layer: 0
+  m_Name: CrabBase
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &478572752
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 478572751}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f0038c16c34866b4f9e25c9c0dc0f7e6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Behavior::Unity.Behavior.BehaviorGraphAgent
+  m_Graph: {fileID: -4920961095669814969, guid: 1be52b96969886547bdfcf7034e6c94a, type: 2}
+  m_BlackboardVariableOverridesList:
+  - rid: 3495279892737032512
+  - rid: 3495279892737032803
+  - rid: 3495279892737032804
+  - rid: 3495279892737032805
+  - rid: 3495279892737032814
+  m_OriginalGraph: {fileID: -4920961095669814969, guid: 1be52b96969886547bdfcf7034e6c94a, type: 2}
+  m_IsInitialised: 0
+  m_IsStarted: 0
+  references:
+    version: 2
+    RefIds:
+    - rid: 3495279892737032512
+      type: {class: 'BlackboardVariable`1[[UnityEngine.GameObject, UnityEngine.CoreModule]]', ns: Unity.Behavior, asm: Unity.Behavior}
+      data:
+        GUID:
+          m_Value0: 1
+          m_Value1: 0
+        Name: Self
+        m_Value: {fileID: 478572751}
+    - rid: 3495279892737032803
+      type: {class: 'BlackboardVariable`1[[System.Single, mscorlib]]', ns: Unity.Behavior, asm: Unity.Behavior}
+      data:
+        GUID:
+          m_Value0: 14227066497220456267
+          m_Value1: 7546513954301327711
+        Name: Speed
+        m_Value: 2
+    - rid: 3495279892737032804
+      type: {class: 'BlackboardVariable`1[[System.Single, mscorlib]]', ns: Unity.Behavior, asm: Unity.Behavior}
+      data:
+        GUID:
+          m_Value0: 8970553499345925226
+          m_Value1: 14103804576156207285
+        Name: DetectRange
+        m_Value: 10
+    - rid: 3495279892737032805
+      type: {class: 'BlackboardVariable`1[[System.Single, mscorlib]]', ns: Unity.Behavior, asm: Unity.Behavior}
+      data:
+        GUID:
+          m_Value0: 4937763551754763585
+          m_Value1: 5612753262335630215
+        Name: GrabRange
+        m_Value: 0.2
+    - rid: 3495279892737032814
+      type: {class: 'BlackboardVariable`1[[UnityEngine.Transform, UnityEngine.CoreModule]]', ns: Unity.Behavior, asm: Unity.Behavior}
+      data:
+        GUID:
+          m_Value0: 17992266168776472002
+          m_Value1: 15565580000524222454
+        Name: Target
+        m_Value: {fileID: 1650915015}
+--- !u!114 &478572753
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 478572751}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 18511641279ed1842a1c2677e9e663f3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Game.Predators.PredatorController
+  data: {fileID: 11400000, guid: 8c14e548ab0f0a54cb36d25ed04247f4, type: 2}
+  target: {fileID: 1650915021}
+--- !u!4 &478572754
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 478572751}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 4.88, y: 0, z: -5.98}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 2102867537}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!4 &496948180 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -4908723573804497728, guid: 86d29a0abe644d541aa982cbca32becf, type: 3}
@@ -1603,6 +1920,87 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1001 &878197957
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 478572754}
+    m_Modifications:
+    - target: {fileID: -8679921383154817045, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 1.8
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 1.8
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 1.8
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 180
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: m_ConstrainProportionsScale
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -6161448157782799470, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: b0603f36fafdb9a41a9c36b2a3ecae6b, type: 2}
+    - target: {fileID: 919132149155446097, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: m_Name
+      value: Crabix
+      objectReference: {fileID: 0}
+    - target: {fileID: 5866666021909216657, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: m_Controller
+      value: 
+      objectReference: {fileID: 9100000, guid: 1892cddf285cdc64ba036d6e70448382, type: 2}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
 --- !u!4 &885734233 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8260831263289367515, guid: 86d29a0abe644d541aa982cbca32becf, type: 3}
@@ -1837,6 +2235,87 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -1234287898430385176, guid: 86d29a0abe644d541aa982cbca32becf, type: 3}
   m_PrefabInstance: {fileID: 4014348328050617664}
   m_PrefabAsset: {fileID: 0}
+--- !u!1001 &1060318645
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 208397437}
+    m_Modifications:
+    - target: {fileID: -8679921383154817045, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 1.8
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 1.8
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 1.8
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 180
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: m_ConstrainProportionsScale
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -6161448157782799470, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: b0603f36fafdb9a41a9c36b2a3ecae6b, type: 2}
+    - target: {fileID: 919132149155446097, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: m_Name
+      value: Crabix
+      objectReference: {fileID: 0}
+    - target: {fileID: 5866666021909216657, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+      propertyPath: m_Controller
+      value: 
+      objectReference: {fileID: 9100000, guid: 1892cddf285cdc64ba036d6e70448382, type: 2}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
 --- !u!4 &1192030104 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 7397115908681412954, guid: 86d29a0abe644d541aa982cbca32becf, type: 3}
@@ -2070,6 +2549,128 @@ Transform:
   m_LocalScale: {x: 7.9933, y: 7.9933, z: 7.9933}
   m_ConstrainProportionsScale: 0
   m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1368170491
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1368170494}
+  - component: {fileID: 1368170493}
+  - component: {fileID: 1368170492}
+  m_Layer: 0
+  m_Name: CrabBase (2)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1368170492
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1368170491}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f0038c16c34866b4f9e25c9c0dc0f7e6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Behavior::Unity.Behavior.BehaviorGraphAgent
+  m_Graph: {fileID: -4920961095669814969, guid: 1be52b96969886547bdfcf7034e6c94a, type: 2}
+  m_BlackboardVariableOverridesList:
+  - rid: 3495279892737032512
+  - rid: 3495279892737032803
+  - rid: 3495279892737032804
+  - rid: 3495279892737032805
+  - rid: 3495279892737032814
+  - rid: 3495279915231871946
+  m_OriginalGraph: {fileID: -4920961095669814969, guid: 1be52b96969886547bdfcf7034e6c94a, type: 2}
+  m_IsInitialised: 0
+  m_IsStarted: 0
+  references:
+    version: 2
+    RefIds:
+    - rid: 3495279892737032512
+      type: {class: 'BlackboardVariable`1[[UnityEngine.GameObject, UnityEngine.CoreModule]]', ns: Unity.Behavior, asm: Unity.Behavior}
+      data:
+        GUID:
+          m_Value0: 1
+          m_Value1: 0
+        Name: Self
+        m_Value: {fileID: 1368170491}
+    - rid: 3495279892737032803
+      type: {class: 'BlackboardVariable`1[[System.Single, mscorlib]]', ns: Unity.Behavior, asm: Unity.Behavior}
+      data:
+        GUID:
+          m_Value0: 14227066497220456267
+          m_Value1: 7546513954301327711
+        Name: Speed
+        m_Value: 2
+    - rid: 3495279892737032804
+      type: {class: 'BlackboardVariable`1[[System.Single, mscorlib]]', ns: Unity.Behavior, asm: Unity.Behavior}
+      data:
+        GUID:
+          m_Value0: 8970553499345925226
+          m_Value1: 14103804576156207285
+        Name: DetectRange
+        m_Value: 6
+    - rid: 3495279892737032805
+      type: {class: 'BlackboardVariable`1[[System.Single, mscorlib]]', ns: Unity.Behavior, asm: Unity.Behavior}
+      data:
+        GUID:
+          m_Value0: 4937763551754763585
+          m_Value1: 5612753262335630215
+        Name: GrabRange
+        m_Value: 0.2
+    - rid: 3495279892737032814
+      type: {class: 'BlackboardVariable`1[[UnityEngine.Transform, UnityEngine.CoreModule]]', ns: Unity.Behavior, asm: Unity.Behavior}
+      data:
+        GUID:
+          m_Value0: 17992266168776472002
+          m_Value1: 15565580000524222454
+        Name: Target
+        m_Value: {fileID: 1650915015}
+    - rid: 3495279915231871946
+      type: {class: 'BlackboardVariable`1[[System.Single, mscorlib]]', ns: Unity.Behavior, asm: Unity.Behavior}
+      data:
+        GUID:
+          m_Value0: 2618484378010944618
+          m_Value1: 946110924189808072
+        Name: GiveUpDelayShell
+        m_Value: 10
+--- !u!114 &1368170493
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1368170491}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 18511641279ed1842a1c2677e9e663f3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Game.Predators.PredatorController
+  data: {fileID: 11400000, guid: 8c14e548ab0f0a54cb36d25ed04247f4, type: 2}
+  target: {fileID: 1650915021}
+--- !u!4 &1368170494
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1368170491}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 1.442, y: 0, z: -6.072}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 365731142}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1546686547
@@ -2452,17 +3053,17 @@ MonoBehaviour:
     ikWeight: 1
   - legName: 
     target: {fileID: 0}
-    animatedFoot: {fileID: 0}
+    animatedFoot: {fileID: 1009947200}
     constraint: {fileID: 0}
     ikWeight: 1
   - legName: 
     target: {fileID: 0}
-    animatedFoot: {fileID: 0}
+    animatedFoot: {fileID: 406143849}
     constraint: {fileID: 0}
     ikWeight: 1
   - legName: 
     target: {fileID: 0}
-    animatedFoot: {fileID: 0}
+    animatedFoot: {fileID: 1646469997}
     constraint: {fileID: 0}
     ikWeight: 1
   groundLayer:
@@ -3280,6 +3881,11 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 60, y: 180, z: 0}
+--- !u!4 &2102867537 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 037a92d6cce92714da68a66aa2702e3b, type: 3}
+  m_PrefabInstance: {fileID: 878197957}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &2130874004
 GameObject:
   m_ObjectHideFlags: 0
@@ -3547,3 +4153,6 @@ SceneRoots:
   - {fileID: 2066057276}
   - {fileID: 838533633}
   - {fileID: 710865169}
+  - {fileID: 478572754}
+  - {fileID: 208397437}
+  - {fileID: 1368170494}

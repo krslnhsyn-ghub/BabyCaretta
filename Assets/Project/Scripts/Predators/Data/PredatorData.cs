@@ -23,9 +23,9 @@ namespace Game.Predators
         [Header("Genel")]
         public PredatorType predatorType;
 
-        [Header("Algılama / Yakalama Mesafeleri")]
-        public float detectRange = 5f;
-        public float grabRange = 1f;
+        // NOT: DetectRange / GrabRange / Speed artık burada değil - bunlar Behavior Graph'ın
+        // kendi Blackboard'unda tutuluyor, çünkü "nasıl takip ederim" tamamen AI/davranış
+        // meselesi. Burada sadece "yakalandıktan sonra kaplumbağaya ne olur" verisi kalıyor.
 
         [Header("Yavaşlatma")]
         [Tooltip("Bu predator kaplumbağayı tutarken hız çarpanı (0-1). Stackable ise birden " +
@@ -46,6 +46,11 @@ namespace Game.Predators
         [Header("Yakalanma Sonucu")]
         [Tooltip("Kurtulamazsa kaç saniye sonra checkpoint'e dönülür")]
         public float captureDelay = 4f;
+
+        [Tooltip("Yakalanma (capture) tehdidinin GEÇERLİ olması için kaç predator'ın aynı anda " +
+                 "tutuyor olması gerekir. Küçük yengeç için 3 (tek başına asla yakalamaz, ancak " +
+                 "3'ü birden tuttuğunda sayaç işler); büyük yengeç gibi solo predator'lar için 1.")]
+        public int requiredStackToCapture = 1;
 
         [Header("İlk Karşılaşma")]
         [Tooltip("Bu predator ile ilk karşılaşmada küçük bir görsel ipucu (ok/parlama) gösterilsin mi")]

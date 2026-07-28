@@ -288,6 +288,11 @@ namespace Game.Character
         public bool IsRestrained { get; internal set; }
         public float RestrainedSpeedMultiplier { get; internal set; } = 1f;
 
+        // Tamamen serbest kalındığında (son predator da bıraktığında) TAM OLARAK BİR KARE
+        // boyunca true yapılır - o karede kaçışı tetikleyen E basışının Sand/Shell tarafına
+        // "sızıp" yanlışlıkla Dig/Burrow başlatmasını önler.
+        public bool SuppressNextSandInput { get; internal set; }
+
 
         // NOT: actionTimer, sandPressStartTime, sandAwaitingDecision artık burada değil -
         // States/SandState.cs'in kendi iç değişkenleri oldu (Dig/Burrow tamamen taşındı).
@@ -401,13 +406,16 @@ namespace Game.Character
             // NOT: Restrained iken (bir predator tutuyorken) Shell/Sand aksiyonlarını
             // tetikleyemez - E tuşu bu sırada TurtlePredatorTarget tarafından escape
             // mekaniği için ayrıca okunuyor.
-            if (!IsRestrained)
+            if (!IsRestrained && !SuppressNextSandInput)
             {
                 shellState.HandleInput(context);
 
                 // ---------- Sand input ----------
                 sandState.HandleInput(context);
             }
+
+            // Bastırma sadece TEK kare geçerli - bu kareyi atladıktan sonra tüket.
+            if (SuppressNextSandInput) SuppressNextSandInput = false;
 
             // ---------- Interaction ----------
             var mouse = Mouse.current;

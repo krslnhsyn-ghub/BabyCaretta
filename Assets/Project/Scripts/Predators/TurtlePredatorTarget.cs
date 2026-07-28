@@ -27,9 +27,17 @@ namespace Game.Predators
         private TurtleController turtleController;
         private TurtleFootIK footIK;
 
-        // Requester (genelde ileride PredatorController) -> o predator'ın slowdownRatio'su.
-        // Birden fazla predator tutuyorsa (stackable), hepsinin çarpanı çarpılarak birleşir.
-        private readonly Dictionary<Component, float> activeRestrainers = new Dictionary<Component, float>();
+        // Bir requester'ın (predator) tutuş bilgisi: ne kadar yavaşlattığı + hangi bacağı tuttuğu.
+        private struct RestrainEntry
+        {
+            public float SlowdownRatio;
+            public Transform GrabLeg;
+        }
+
+        // Requester (genelde PredatorController) -> tutuş bilgisi. Birden fazla predator
+        // tutuyorsa (stackable), hepsinin çarpanı çarpılarak birleşir; her biri farklı bir
+        // bacağa atanmaya çalışılır (mümkünse aynı bacağı iki predator paylaşmaz).
+        private readonly Dictionary<Component, RestrainEntry> activeRestrainers = new Dictionary<Component, RestrainEntry>();
 
         // Basitlik için V1'de: escape zamanlama ayarları (min/max aralık) en son tutan
         // predator'ın PredatorData'sından okunur. Birden fazla farklı tipte predator aynı anda
@@ -43,8 +51,29 @@ namespace Game.Predators
         public int ActiveRestrainerCount => activeRestrainers.Count;
         public bool IsCurrentlyRestrained => activeRestrainers.Count > 0;
 
-        /// <summary>Kurtulma başarılı olduğunda fırlatılır - hangi predator'ın bırakılacağına çağıran taraf karar verir.</summary>
-        public event Action OnEscapeSucceeded;
+        /// <summary>
+        /// Kaplumbağa şu an yakalanabilir mi? Gömülüyken (Burrow, IsHidden) veya kabuktayken
+        /// (ShellEnter/ShellIdle/ShellExit) predator'lar onu ne görebilir ne yakalayabilir.
+        /// </summary>
+        /// <summary>Predator'ların "görebiliyor muyum" kontrolü için passthrough (Burrow/IsHidden).</summary>
+        public bool IsHidden => turtleController.IsHidden;
+
+        public bool IsVulnerable
+        {
+            get
+            {
+                if (turtleController.IsHidden) return false;
+                CharacterState state = turtleController.CurrentState;
+                return state != CharacterState.ShellEnter &&
+                       state != CharacterState.ShellIdle &&
+                       state != CharacterState.ShellExit;
+            }
+        }
+
+        /// <summary>Kurtulma başarılı olduğunda fırlatılır. Parametre, TAM OLARAK hangi predator'ın
+        /// bırakıldığını bildirir (biz burada zaten SADECE BİRİNİ bıraktık) - dinleyenler kendi
+        /// requester'ları bu mu diye kontrol etmeli.</summary>
+        public event Action<Component> OnEscapeSucceeded;
         /// <summary>Yanlış zamanlamayla basıldığında fırlatılır (çok hızlı ya da çok yavaş).</summary>
         public event Action OnEscapeFailed;
         /// <summary>Süre dolup kurtulamayınca fırlatılır - checkpoint sistemini tetiklemek isteyen taraf bunu dinler.</summary>
@@ -62,24 +91,80 @@ namespace Game.Predators
 
             ReadEscapeInput();
 
-            if (captureTimer >= 0f)
+            // Capture tehdidi SADECE bu predator tipinin gerektirdiği stack sayısına
+            // ulaşıldığında geçerli olur (örn. küçük yengeç tek başına asla yakalayamaz,
+            // 3'ü birden tutunca sayaç işlemeye başlar). Eşik altına düşülürse sayaç durur.
+            bool captureThreatActive = escapeSettingsSource != null &&
+                                        activeRestrainers.Count >= escapeSettingsSource.requiredStackToCapture;
+
+            if (!captureThreatActive)
             {
-                captureTimer -= Time.deltaTime;
-                if (captureTimer <= 0f)
-                {
-                    captureTimer = -1f;
-                    OnCaptureRequested?.Invoke();
-                }
+                captureTimer = -1f;
+                return;
+            }
+
+            if (captureTimer < 0f)
+            {
+                captureTimer = escapeSettingsSource.captureDelay;
+            }
+
+            captureTimer -= Time.deltaTime;
+            if (captureTimer <= 0f)
+            {
+                captureTimer = -1f;
+                OnCaptureRequested?.Invoke();
             }
         }
 
         /// <summary>
-        /// Yakalama noktası ister (rastgele bir bacağın gerçek kemik referansı). TurtleFootIK
-        /// yoksa veya bacak dizisi boşsa null döner - çağıran taraf null kontrolü yapmalı.
+        /// Verilen konuma (genelde predator'ın kendi pozisyonu) en yakın, başka bir
+        /// predator tarafından tutulmayan (boş) bacağı bulur. Hepsi doluysa en yakın
+        /// dolu bacağı paylaşımlı döndürür (null yerine, nadir bir durum).
         /// </summary>
-        public Transform RequestGrabPoint()
+        private Transform PickNearestFreeLeg(Vector3 fromPosition)
         {
-            return footIK != null ? footIK.GetRandomFootTransform() : null;
+            if (footIK == null) return null;
+
+            var occupiedLegs = new HashSet<Transform>();
+            foreach (RestrainEntry entry in activeRestrainers.Values)
+            {
+                if (entry.GrabLeg != null) occupiedLegs.Add(entry.GrabLeg);
+            }
+
+            Transform[] allLegs = footIK.GetAllFootTransforms();
+            Transform bestFree = null;
+            Transform bestAny = null;
+            float bestFreeDistSqr = float.MaxValue;
+            float bestAnyDistSqr = float.MaxValue;
+
+            foreach (Transform leg in allLegs)
+            {
+                if (leg == null) continue;
+                float distSqr = (leg.position - fromPosition).sqrMagnitude;
+
+                if (distSqr < bestAnyDistSqr)
+                {
+                    bestAnyDistSqr = distSqr;
+                    bestAny = leg;
+                }
+
+                if (!occupiedLegs.Contains(leg) && distSqr < bestFreeDistSqr)
+                {
+                    bestFreeDistSqr = distSqr;
+                    bestFree = leg;
+                }
+            }
+
+            return bestFree != null ? bestFree : bestAny;
+        }
+
+        /// <summary>
+        /// Predator'ların (örn. Approach Target node'u) yaklaşırken hedefleyeceği en yakın
+        /// boş bacağı sormasını sağlar - herhangi bir rezervasyon YAPMAZ, sadece bakar.
+        /// </summary>
+        public Transform PeekNearestFreeLeg(Vector3 fromPosition)
+        {
+            return PickNearestFreeLeg(fromPosition);
         }
 
         /// <summary>
@@ -87,18 +172,43 @@ namespace Game.Predators
         /// çağırırsa yok sayılır. Stackable olmayan bir predator zaten tutuyorken yeni bir
         /// tutma isteği (V1 basit kuralı) reddedilir.
         /// </summary>
-        public bool BeginRestrain(Component requester, PredatorData data)
+        public bool BeginRestrain(Component requester, PredatorData data, Vector3 requesterPosition, out Transform grabPoint)
         {
-            if (requester == null || data == null) return false;
-            if (activeRestrainers.ContainsKey(requester)) return false;
-            if (!data.stackable && activeRestrainers.Count > 0) return false;
+            grabPoint = null;
+            if (requester == null || data == null)
+            {
+                Debug.Log($"[Predator-Debug] BeginRestrain REDDEDİLDİ (requester/data null) - requester={requester}, data={data}");
+                return false;
+            }
+            if (activeRestrainers.ContainsKey(requester))
+            {
+                Debug.Log($"[Predator-Debug] BeginRestrain REDDEDİLDİ (zaten bu requester tutuyor) - requester={requester.name}");
+                return false;
+            }
+            if (!data.stackable && activeRestrainers.Count > 0)
+            {
+                Debug.Log($"[Predator-Debug] BeginRestrain REDDEDİLDİ (stackable={data.stackable}, zaten {activeRestrainers.Count} tutan var) - requester={requester.name}");
+                return false;
+            }
+            if (!IsVulnerable)
+            {
+                Debug.Log($"[Predator-Debug] BeginRestrain REDDEDİLDİ (kaplumbağa Hidden/Shell'de, yakalanamaz) - requester={requester.name}");
+                return false;
+            }
 
-            activeRestrainers[requester] = data.slowdownRatio;
+            grabPoint = PickNearestFreeLeg(requesterPosition);
+
+            activeRestrainers[requester] = new RestrainEntry
+            {
+                SlowdownRatio = data.slowdownRatio,
+                GrabLeg = grabPoint
+            };
             escapeSettingsSource = data;
-            captureTimer = data.captureDelay;
 
             RecalculateSpeedMultiplier();
             turtleController.IsRestrained = true;
+
+            Debug.Log($"[Predator-Debug] BeginRestrain BAŞARILI - requester={requester.name}, bacak={(grabPoint != null ? grabPoint.name : "YOK")}, toplam tutan={activeRestrainers.Count}, stackable={data.stackable}");
             return true;
         }
 
@@ -111,6 +221,7 @@ namespace Game.Predators
             {
                 turtleController.IsRestrained = false;
                 turtleController.RestrainedSpeedMultiplier = 1f;
+                turtleController.SuppressNextSandInput = true;
                 captureTimer = -1f;
                 escapeFirstPressTime = -1f;
                 escapeSettingsSource = null;
@@ -121,12 +232,36 @@ namespace Game.Predators
             }
         }
 
+        /// <summary>
+        /// Aktif tutuculardan BİRİNİ (hangisi olduğu önemli değil, ilk bulunan) serbest bırakır
+        /// ve mevcut EndRestrain temizleme mantığını (multiplier yeniden hesaplama, tamamen
+        /// boşaldıysa flag/timer sıfırlama) yeniden kullanır.
+        /// </summary>
+        private Component ReleaseOneRestrainer()
+        {
+            if (activeRestrainers.Count == 0) return null;
+
+            Component toRelease = null;
+            foreach (Component key in activeRestrainers.Keys)
+            {
+                toRelease = key;
+                break;
+            }
+
+            if (toRelease != null)
+            {
+                EndRestrain(toRelease);
+            }
+
+            return toRelease;
+        }
+
         private void RecalculateSpeedMultiplier()
         {
             float combined = 1f;
-            foreach (float ratio in activeRestrainers.Values)
+            foreach (RestrainEntry entry in activeRestrainers.Values)
             {
-                combined *= ratio;
+                combined *= entry.SlowdownRatio;
             }
             turtleController.RestrainedSpeedMultiplier = combined;
         }
@@ -152,7 +287,9 @@ namespace Game.Predators
 
             if (gap >= escapeSettingsSource.escapeIntervalMin && gap <= escapeSettingsSource.escapeIntervalMax)
             {
-                OnEscapeSucceeded?.Invoke();
+                // Hepsi değil, SADECE BİR predator bırakılır - stack birer birer azalır.
+                Component released = ReleaseOneRestrainer();
+                OnEscapeSucceeded?.Invoke(released);
             }
             else
             {
