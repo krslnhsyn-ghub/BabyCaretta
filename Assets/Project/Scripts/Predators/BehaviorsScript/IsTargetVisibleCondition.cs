@@ -4,7 +4,7 @@ using UnityEngine;
 using Game.Predators;
 
 [Serializable, Unity.Properties.GeneratePropertyBag]
-[Condition(name: "Is Target Visible", story: "[Target] is not hidden", category: "Conditions", id: "c09aeadced1602a655309a55789dab49")]
+[Condition(name: "Is Target Hidden", story: "[Target] is not hidden", category: "Conditions", id: "c09aeadced1602a655309a55789dab49")]
 public partial class IsTargetVisibleCondition : Condition
 {
     [SerializeReference] public BlackboardVariable<Transform> Target;

@@ -16,17 +16,24 @@ public partial class ApproachTargetAction : Action
     // Bu çalışma boyunca (OnStart -> OnEnd) geçici önbellek, serialize edilmiyor.
     private PredatorController cachedController;
     private Animator cachedAnimator;
+    private UnityEngine.AI.NavMeshAgent cachedAgent;
 
-    protected override Status OnStart()
+protected override Status OnStart()
     {
         if (Target.Value == null) return Status.Failure;
         cachedController = GameObject.GetComponent<PredatorController>();
         cachedAnimator = GameObject.GetComponent<Animator>();
+        cachedAgent = cachedController != null ? cachedController.Agent : GameObject.GetComponent<UnityEngine.AI.NavMeshAgent>();
+        if (cachedAgent != null)
+        {
+            cachedAgent.isStopped = false;
+            cachedAgent.speed = Speed.Value;
+        }
         cachedAnimator?.SetBool("IsMoving", true);
         return Status.Running;
     }
 
-    protected override Status OnUpdate()
+protected override Status OnUpdate()
     {
         if (Target.Value == null) return Status.Failure;
 
@@ -47,22 +54,32 @@ public partial class ApproachTargetAction : Action
             return Status.Success;
         }
 
-        // Düz çizgide hedefe doğru ilerle (NavMesh yok, basit hareket).
-        self.position = Vector3.MoveTowards(self.position, targetPosition, Speed.Value * Time.deltaTime);
-
-        // Hedefe dönük dursun (Y ekseni sabit, sadece yatayda döner).
-        Vector3 lookTarget = new Vector3(targetPosition.x, self.position.y, targetPosition.z);
-        if (lookTarget != self.position)
+        if (cachedAgent != null)
         {
-            self.LookAt(lookTarget);
+            // NavMesh üzerinden hedefe doğru yönlendir - engel etrafından dolaşma dahil.
+            cachedAgent.SetDestination(targetPosition);
+        }
+        else
+        {
+            // NavMeshAgent yoksa eski düz-çizgi hareketi yedek olarak kalsın.
+            self.position = Vector3.MoveTowards(self.position, targetPosition, Speed.Value * Time.deltaTime);
+            Vector3 lookTarget = new Vector3(targetPosition.x, self.position.y, targetPosition.z);
+            if (lookTarget != self.position)
+            {
+                self.LookAt(lookTarget);
+            }
         }
 
         return Status.Running;
     }
 
-    protected override void OnEnd()
+protected override void OnEnd()
     {
         cachedAnimator?.SetBool("IsMoving", false);
+        if (cachedAgent != null)
+        {
+            cachedAgent.isStopped = true;
+        }
     }
 }
 

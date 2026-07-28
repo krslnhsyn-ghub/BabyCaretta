@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 2151406503768112044}
   - component: {fileID: 6322491038062927880}
   - component: {fileID: 1214163275368030493}
+  - component: {fileID: 4362782349924115052}
   m_Layer: 0
   m_Name: SmallCrab
   m_TagString: Untagged
@@ -50,6 +51,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Game.Predators.PredatorController
   data: {fileID: 11400000, guid: 8c14e548ab0f0a54cb36d25ed04247f4, type: 2}
   target: {fileID: 0}
+  gravity: -9.81
+  groundedStickForce: -2
+  groundCheckDistance: 1.5
+  groundLayerMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
 --- !u!114 &2151406503768112044
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -160,6 +167,28 @@ CapsuleCollider:
   m_Height: 0
   m_Direction: 1
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!195 &4362782349924115052
+NavMeshAgent:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8520874283372897112}
+  m_Enabled: 1
+  m_AgentTypeID: 0
+  m_Radius: 0.3
+  m_Speed: 3.5
+  m_Acceleration: 12
+  avoidancePriority: 50
+  m_AngularSpeed: 360
+  m_StoppingDistance: 0.05
+  m_AutoTraverseOffMeshLink: 1
+  m_AutoBraking: 0
+  m_AutoRepath: 1
+  m_Height: 0.5
+  m_BaseOffset: 0
+  m_WalkableMask: 4294967295
+  m_ObstacleAvoidanceType: 4
 --- !u!1001 &4309896475241832571
 PrefabInstance:
   m_ObjectHideFlags: 0

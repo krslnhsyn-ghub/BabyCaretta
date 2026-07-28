@@ -17,13 +17,19 @@ public partial class GiveUoAndReturnAction : Action
 
     // Bu çalışma boyunca geçici durum, serialize edilmiyor.
     private PredatorController cachedController;
+    private UnityEngine.AI.NavMeshAgent cachedAgent;
     private float elapsed;
     private float chosenDelay;
     private bool isReturning;
 
-    protected override Status OnStart()
+protected override Status OnStart()
     {
         cachedController = GameObject.GetComponent<PredatorController>();
+        cachedAgent = cachedController != null ? cachedController.Agent : GameObject.GetComponent<UnityEngine.AI.NavMeshAgent>();
+        if (cachedAgent != null)
+        {
+            cachedAgent.isStopped = true;
+        }
         elapsed = 0f;
         isReturning = false;
 
@@ -45,7 +51,7 @@ public partial class GiveUoAndReturnAction : Action
         return Status.Running;
     }
 
-    protected override Status OnUpdate()
+protected override Status OnUpdate()
     {
         if (cachedController == null) return Status.Failure;
 
@@ -71,13 +77,17 @@ public partial class GiveUoAndReturnAction : Action
             {
                 isReturning = true;
                 GameObject.GetComponent<Animator>()?.SetBool("IsMoving", true);
+                if (cachedAgent != null)
+                {
+                    cachedAgent.isStopped = false;
+                    cachedAgent.speed = Speed != null ? Speed.Value : 2f;
+                }
             }
             return Status.Running;
         }
 
         Transform self = GameObject.transform;
         Vector3 spawnPosition = cachedController.SpawnPosition;
-        float speed = Speed != null ? Speed.Value : 2f;
 
         float distance = Vector3.Distance(self.position, spawnPosition);
         if (distance <= 0.3f)
@@ -85,13 +95,25 @@ public partial class GiveUoAndReturnAction : Action
             return Status.Success;
         }
 
-        self.position = Vector3.MoveTowards(self.position, spawnPosition, speed * Time.deltaTime);
+        if (cachedAgent != null)
+        {
+            cachedAgent.SetDestination(spawnPosition);
+        }
+        else
+        {
+            float speed = Speed != null ? Speed.Value : 2f;
+            self.position = Vector3.MoveTowards(self.position, spawnPosition, speed * Time.deltaTime);
+        }
         return Status.Running;
     }
 
-    protected override void OnEnd()
+protected override void OnEnd()
     {
         GameObject.GetComponent<Animator>()?.SetBool("IsMoving", false);
+        if (cachedAgent != null)
+        {
+            cachedAgent.isStopped = true;
+        }
     }
 }
 

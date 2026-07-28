@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.AI;
 using Game.Character;
 using Game.Interaction;
 
@@ -38,6 +39,19 @@ namespace Game.Predators
         public bool IsStunned { get; private set; }
         private float stunTimer;
 
+        // ===================== Yerçekimi Ayarları =====================
+        [Header("Yerçekimi")]
+        [SerializeField] private float gravity = -9.81f;                // Düz düzlemde temel yürüme hızı
+        [SerializeField] private float groundedStickForce = -2f;        // Gördüğünüzde zemine yapışık kuvvet
+        [SerializeField] private float groundCheckDistance = 1.5f;      // Zemine ne kadar aşağıine bakacağız
+        [SerializeField] private LayerMask groundLayerMask = ~0;        // Zemine層的 layer mask
+
+        // Internal state for gravity
+        private CharacterController controller;
+        private NavMeshAgent agent;
+        public NavMeshAgent Agent => agent;
+        private Vector3 verticalVelocity;
+
         private void Awake()
         {
             SpawnPosition = transform.position;
@@ -46,10 +60,21 @@ namespace Game.Predators
             {
                 target = FindFirstObjectByType<TurtlePredatorTarget>();
             }
+
+            // Get CharacterController if exists
+            controller = GetComponent<CharacterController>();
+            agent = GetComponent<NavMeshAgent>();
         }
 
         private void Update()
         {
+            // NavMeshAgent zaten bakılmış NavMesh üzerinde kendi konum/yükseklik yönetimini
+            // yapıyor - eski CharacterController tabanlı yerçekimi sadece agent yoksa çalışsın.
+            if (agent == null)
+            {
+                ApplyGravity();
+            }
+
             if (!IsStunned) return;
 
             stunTimer -= Time.deltaTime;
@@ -57,7 +82,6 @@ namespace Game.Predators
             {
                 stunTimer = 0f;
                 IsStunned = false;
-                Debug.Log($"[{name}] Stun finished. IsStunned set to false.");
             }
         }
 
@@ -66,7 +90,6 @@ namespace Game.Predators
         {
             stunTimer = Mathf.Max(stunTimer, duration);
             IsStunned = true;
-            Debug.Log($"[{name}] Stunned for {duration}s. IsStunned = true, stunTimer = {stunTimer}");
             // If currently holding the turtle, release it when stunned
             if (IsRestrainingTurtle)
             {
@@ -140,6 +163,22 @@ namespace Game.Predators
             }
             IsRestrainingTurtle = false;
             GrabPoint = null;
+        }
+
+        // ----------------- Yerçekimi uygulaması -----------------
+        private void ApplyGravity()
+        {
+            if (controller == null) return;
+
+            // Ground check: raycast downwards from slightly above the pivot
+            bool grounded = Physics.Raycast(transform.position + Vector3.up * 0.5f, Vector3.down, out RaycastHit hit, groundCheckDistance, groundLayerMask);
+            if (grounded && verticalVelocity.y < 0f)
+            {
+                verticalVelocity.y = groundedStickForce;
+            }
+
+            verticalVelocity.y += gravity * Time.deltaTime;
+            controller.Move(verticalVelocity * Time.deltaTime);
         }
     }
 }

@@ -66,7 +66,8 @@ namespace Game.Predators
                 CharacterState state = turtleController.CurrentState;
                 return state != CharacterState.ShellEnter &&
                        state != CharacterState.ShellIdle &&
-                       state != CharacterState.ShellExit;
+                       state != CharacterState.ShellExit &&
+                       state != CharacterState.ShellSlide;
             }
         }
 
